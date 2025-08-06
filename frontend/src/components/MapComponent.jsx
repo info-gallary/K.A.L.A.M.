@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+ 
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
