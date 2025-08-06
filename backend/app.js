@@ -12,7 +12,6 @@ const app = express();
 // Environment check function
 const checkEnvironment = () => {
   console.log('🔍 Environment Check:');
-  console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
   console.log(`PORT: ${process.env.PORT || 'not set'}`);
   console.log(`MONGO_URL: ${process.env.MONGO_URL ? '✅ Set' : '❌ Not set'}`);
   
@@ -44,8 +43,8 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Basic middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
@@ -102,11 +101,11 @@ app.use((error, req, res, next) => {
   res.status(500).json({
     success: false,
     message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    error: error.message
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, async () => {
   console.log('🚀 Starting Project Kalam Backend...');

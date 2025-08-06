@@ -149,7 +149,7 @@ const ReportPage = () => {
     { key: 'Past Image Frame 4 (T-3)', label: 'Image at T-3 ', description: '90 mins ago' },
     { key: 'Past Image Frame 3 (T-2)', label: 'Image at T-2 ', description: '60 mins ago' },
     { key: 'Past Image Frame 2 (T-1)', label: 'Image at T-1 ', description: '30 mins ago' },
-    { key: 'Current Image Frame 1 (T)', label: 'Image at T', description: 'Current Image' },
+    { key: 'Current Image Frame 1 (T)', label: 'Image at T-0', description: 'Current Image' },
   ];
 
   // Handle mouse events for resizing
@@ -553,7 +553,7 @@ const ReportPage = () => {
       setMiddleHeight(300);
       setReportHistory([]);
       
-      toast.success('All data cleared successfully');
+      toast.success('Cache Cleared');
     }
   };
 
@@ -620,10 +620,10 @@ const ReportPage = () => {
       {process.env.NODE_ENV === 'development' && (
         <button
           onClick={clearAllData}
-          className={`fixed top-6 right-20 z-50 p-2 rounded-lg bg-red-600 text-white text-xs transition-colors shadow-lg hover:bg-red-700`}
+          className={` fixed top-6 right-20 z-50 py-3.5 px-3 font-semibold rounded-lg bg-stone-600 text-white text-xs transition-colors shadow-lg hover:bg-[#C15F3C] cursor-pointer `}
           title="Clear all saved data (Development only)"
         >
-          Clear Data
+          Clear Cache
         </button>
       )}
 
@@ -631,7 +631,7 @@ const ReportPage = () => {
       <div className={`fixed bottom-6 right-6 z-40 p-2 rounded-lg ${themeClasses.bgSecondary} ${themeClasses.border} border text-xs ${themeClasses.textMuted}`}>
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span>Data Auto-Saved</span>
+          <span>Cache Memory Saved</span>
         </div>
       </div>
 
