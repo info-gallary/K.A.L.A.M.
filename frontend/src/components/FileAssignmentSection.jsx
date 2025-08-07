@@ -3,7 +3,8 @@
 // components/FileAssignmentSection.jsx
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../libs/axios'
-import toast  from 'react-hot-toast'
+
+import toast from 'react-hot-toast'
 import {
   Image,
   FolderOpen,
@@ -22,6 +23,8 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
+
+import ModelTestAndTerminalPreview from './ModelTestAndTerminalPreview';
 
 const FileAssignmentSection = ({
   middleHeight,
@@ -50,13 +53,12 @@ const FileAssignmentSection = ({
       return 'upload';
     }
   });
-
   const [testFolder, setTestFolder] = useState(() => {
     try {
-      const saved = localStorage.getItem('testFolder');
-      return saved ? JSON.parse(saved) : null;
+      const saved = localStorage.getItem('testFolder') || '';
+      return saved ? JSON.parse(saved) : '';
     } catch {
-      return null;
+      return '';
     }
   });
 
@@ -154,72 +156,93 @@ const FileAssignmentSection = ({
   };
 
   // Handle test folder selection
-  const handleTestFolderSelection = async () => {
-    if (!('showDirectoryPicker' in window)) {
-      alert('File System Access API not supported. Please use Chrome or Edge browser.');
-      return;
-    }
+  // const handleTestFolderSelection = async () => {
+  
+  //   try {
+  //     await axiosInstance.post('/folder-path', {
+  //       folderPath: testFolder
+  //     });
 
-    try {
-      const dirHandle = await window.showDirectoryPicker({
-        mode: 'read'
-      });
+  //     // const dirHandle = await window.showDirectoryPicker({
+  //     //   mode: 'read'
+  //     // });
 
-      // Scan directory for test files
-      const testFiles = [];
-      for await (const [name, handle] of dirHandle.entries()) {
-        if (handle.kind === 'file') {
-          const ext = name.split('.').pop()?.toLowerCase() || '';
-          if (['h5', 'hdf5', 'tif', 'tiff', 'jpg', 'jpeg', 'png'].includes(ext)) {
-            const file = await handle.getFile();
-            testFiles.push({
-              name,
-              size: file.size,
-              type: ext,
-              handle
-            });
-          }
-        }
-      }
+  //     // // Scan directory for test files
+  //     // const testFiles = [];
+  //     // for await (const [name, handle] of dirHandle.entries()) {
+  //     //   if (handle.kind === 'file') {
+  //     //     const ext = name.split('.').pop()?.toLowerCase() || '';
+  //     //     if (['h5', 'hdf5', 'tif', 'tiff', 'jpg', 'jpeg', 'png'].includes(ext)) {
+  //     //       const file = await handle.getFile();
+  //     //       testFiles.push({
+  //     //         name,
+  //     //         size: file.size,
+  //     //         type: ext,
+  //     //         handle
+  //     //       });
+  //     //     }
+  //     //   }
+  //     // }
+  //     // console.log(dirHandle)
+  //     // setTestFolder({
+  //     //   name: dirHandle.name,
+  //     //   handle: dirHandle,
+  //     //   fileCount: testFiles.length,
+  //     //   files: testFiles.slice(0, 10), // Store first 10 files for preview
+  //     //   totalFiles: testFiles.length
+  //     // });
 
-      setTestFolder({
-        name: dirHandle.name,
-        handle: dirHandle,
-        fileCount: testFiles.length,
-        files: testFiles.slice(0, 10), // Store first 10 files for preview
-        totalFiles: testFiles.length
-      });
+  //   } catch (error) {
+  //     if (error.name !== 'AbortError') {
+  //       console.error('Test folder selection error:', error);
+  //       alert('Failed to select test folder: ' + error.message);
+  //     }
+  //   }
+  // };
 
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Test folder selection error:', error);
-        alert('Failed to select test folder: ' + error.message);
-      }
-    }
-  };
+
 
   // Handle model testing
-  const handleModelTesting = async () => {
-    if (!testFolder) {
-      toast.error('Please select a test folder first');
-      return;
-    }
+  // const handleModelTesting = async () => {
 
-    setIsModelTesting(true);
-    
-    try {
-      // Use axios for API call to backend for prediction
-      const response = await axiosInstance.post('/folder-path', {
-        folderPath: 'C:\\Users\\Admin\\Documents\\Satellite\\August07',
-      });
-      console.log('✅ Node backend response:', response.data)
-      const data = response.data;
 
-    } catch (error) {
-      console.error('❌ Error sending folder path:', err.message);
-    }
+  //   setIsModelTesting(true);
 
-  };
+  //   // try {
+  //   //   // Use axios for API call to backend for prediction
+  //   //   const response = await axiosInstance.post('/folder-path', {
+  //   //     folderPath: 'C:\\Users\\Admin\\Documents\\Satellite\\August07',
+  //   //   });
+  //   //   console.log('✅ Node backend response:', response.data)
+  //   //   const data = response.data;
+
+  //   // } catch (error) {
+  //   //   console.error('❌ Error sending folder path:', err.message);
+  //   // }
+
+
+  //   try {
+  //     const ws = new WebSocket('ws://localhost:5001'); // match backend port
+
+  //     ws.onopen = async () => {
+  //       console.log('✅ WebSocket connected. Starting model test...');
+  //       await axiosInstance.post('/folder-path', {
+  //         folderPath: testFolder
+  //       });
+  //     };
+
+  //     ws.onmessage = (event) => {
+  //       const { type, content } = JSON.parse(event.data);
+
+  //       setLogs(prev => [...prev, { type, content }]);
+  //     };
+
+  //     ws.onerror = (err) => console.error('WebSocket error:', err);
+  //     ws.onclose = () => console.log('❌ WebSocket disconnected');
+  //   } catch (err) {
+  //     console.error('Axios Error:', err.message);
+  //   }
+  // };
 
   // Clear test results
   const clearTestResults = () => {
@@ -240,7 +263,8 @@ const FileAssignmentSection = ({
       {isProcessing && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded">
           <div className={`${themeClasses.card} border rounded-lg p-6 max-w-sm w-full mx-4`}>
-            <div className="text-center">
+
+            {/* <div className="text-center">
               <div className="relative">
                 {isPredicting ? (
                   <Brain className={`w-12 h-12 mx-auto mb-4 ${themeClasses.accent} animate-pulse`} style={{ color: themeClasses.accent }} />
@@ -267,7 +291,10 @@ const FileAssignmentSection = ({
               <p className={`text-xs ${themeClasses.textMuted} mt-2`}>
                 Please wait, do not refresh the page...
               </p>
-            </div>
+            </div> */}
+
+
+
           </div>
         </div>
       )}
@@ -615,27 +642,36 @@ const FileAssignmentSection = ({
                 )}
               </div>
 
-              {!testFolder ? (
+         
                 <div className="text-center py-8">
                   <Folder className={`w-12 h-12 mx-auto mb-3 ${themeClasses.textMuted} opacity-50`} />
                   <p className={`text-sm ${themeClasses.textMuted} mb-4`}>
                     Select a folder containing test data files
                   </p>
-                  <button
-                    onClick={handleTestFolderSelection}
+                  <input
+                    type="text"
+                    placeholder="Paste full folder path"
+                    value={testFolder}
+                    onChange={(e) => setTestFolder(e.target.value)}
+                    className=" text-amber-50 border-2 rounded-xl  border-orange-600/60 outline-none  p-2  w-full"
+                  />
+                  {/* <button
+                    onClick={handleModelTesting}
                     disabled={isProcessing}
-                    className={`flex items-center space-x-2 px-4 py-2 mx-auto text-sm rounded-lg font-medium transition-all ${isProcessing
+                    className={`w-full flex items-center space-x-2 px-4 py-2 text-center mt-2 text-sm rounded-lg font-medium transition-all ${isProcessing
                       ? 'opacity-50 cursor-not-allowed bg-gray-400'
-                      : 'text-white hover:opacity-90 transform hover:scale-105'
+                      : 'text-white hover:opacity-90 transform '
                       }`}
                     style={{ backgroundColor: isProcessing ? '#666' : themeClasses.accent }}
                   >
-                    <FolderOpen className="w-4 h-4" />
-                    <span>Select Test Folder</span>
-                  </button>
+                    <span>Continue</span>
+                  </button> */}
+
+
+                  <ModelTestAndTerminalPreview testFolder={testFolder} />
                 </div>
-              ) : (
-                <div className={`p-3 rounded ${themeClasses.successBg} border ${themeClasses.successBorder}`}>
+        
+                {/* <div className={`p-3 rounded ${themeClasses.successBg} border ${themeClasses.successBorder}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <CheckCircle className={`w-5 h-5 ${themeClasses.success}`} />
@@ -654,10 +690,10 @@ const FileAssignmentSection = ({
                     >
                       Change
                     </button>
-                  </div>
+                  </div> */}
 
                   {/* Preview of test files */}
-                  {testFolder.files.length > 0 && (
+                  {/* {testFolder.files.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <p className={`text-xs ${themeClasses.textMuted} mb-2`}>Preview (first 10 files):</p>
                       <div className="grid grid-cols-2 gap-1 text-xs">
@@ -674,9 +710,9 @@ const FileAssignmentSection = ({
                         </p>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
+                  )} */}
+                {/* </div> */}
+              
             </div>
 
             {/* Model Testing Button */}
@@ -694,7 +730,9 @@ const FileAssignmentSection = ({
                       </p>
                     </div>
                   </div>
-                  <button
+
+
+                  {/* <button
                     onClick={handleModelTesting}
                     disabled={isProcessing}
                     className={`flex items-center space-x-2 px-4 py-2 text-sm rounded-lg font-medium transition-all ${!isProcessing
@@ -705,7 +743,7 @@ const FileAssignmentSection = ({
                   >
                     <Play className="w-4 h-4" />
                     <span>Run Tests</span>
-                  </button>
+                  </button> */}
                 </div>
               </div>
             )}
@@ -801,31 +839,11 @@ const FileAssignmentSection = ({
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={handleModelTesting}
-                    disabled={isProcessing}
-                    className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 text-xs rounded border ${themeClasses.border} ${themeClasses.textMuted} ${themeClasses.hover} transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Rerun Tests</span>
-                  </button>
-                  <button
-                    onClick={clearTestResults}
-                    disabled={isProcessing}
-                    className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 text-xs rounded border ${themeClasses.border} ${themeClasses.error} hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>Clear Results</span>
-                  </button>
-                </div>
+             
               </div>
             )}
 
-        
+
           </div>
         )}
       </div>

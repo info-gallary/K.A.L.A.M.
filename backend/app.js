@@ -3,47 +3,18 @@ import {config} from 'dotenv'
 import cors from 'cors';
 import fs from 'fs';
 
-
+import  { spawn } from 'child_process';
+import {WebSocketServer }  from 'ws'
 
 import {connectDB} from './utils/db.js'
 import r2Routes from './routes/r2upload.routes.js'
 import testRoutes from './routes/modelTest.routes.js'
 
+import { setClient } from './utils/websocket.js';
+
+
 config();
 const app = express();
-
-// Environment check function
-const checkEnvironment = () => {
-  console.log('🔍 Environment Check:');
-  console.log(`PORT: ${process.env.PORT || 'not set'}`);
-  console.log(`MONGO_URL: ${process.env.MONGO_URL ? '✅ Set' : '❌ Not set'}`);
-  
-  console.log('\n🔗 R2 Configuration:');
-  console.log(`R2_BUCKET_NAME: ${process.env.R2_BUCKET_NAME ? '✅ ' + process.env.R2_BUCKET_NAME : '❌ Not set'}`);
-  console.log(`R2_PUBLIC_URL: ${process.env.R2_PUBLIC_URL ? '✅ ' + process.env.R2_PUBLIC_URL : '❌ Not set'}`);
-  console.log(`R2_ENDPOINT: ${process.env.R2_ENDPOINT ? '✅ Set' : '❌ Not set'}`);
-  console.log(`R2_ACCESS_KEY_ID: ${process.env.R2_ACCESS_KEY_ID ? '✅ Set' : '❌ Not set'}`);
-  console.log(`R2_SECRET_ACCESS_KEY: ${process.env.R2_SECRET_ACCESS_KEY ? '✅ Set' : '❌ Not set'}`);
-  
-  // Check for missing R2 variables
-  const requiredR2Vars = ['R2_BUCKET_NAME', 'R2_PUBLIC_URL', 'R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'];
-  const missingVars = requiredR2Vars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    console.log(`\n❌ Missing R2 environment variables: ${missingVars.join(', ')}`);
-    return false;
-  }
-  
-  console.log('\n✅ All R2 environment variables are set');
-  return true;
-};
-
-// Create uploads directory
-const uploadsDir = './uploads';
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('📁 Created uploads directory');
-}
 
 // Basic middleware
 app.use(express.json({ limit: '100mb' }));
@@ -52,6 +23,26 @@ app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true,
 }));
+
+
+// Setup {WebSocketServer } server on different port
+const wss = new WebSocketServer({ port: 3001 });
+
+wss.on('connection', (ws) => {
+  console.log('🧠 WebSocket client connected');
+  setClient(ws); 
+});
+
+
+
+// Create uploads directory
+const uploadsDir = './uploads';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('📁 Created uploads directory');
+}
+
+
 
 // Routes
 app.get('/', (req, res) => {
@@ -114,22 +105,16 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log('🚀 Starting Project Kalam Backend...');
   
-  // Check environment variables
-  const envOk = checkEnvironment();
-  
   try {
     await connectDB();
     console.log(`\n✅ Server running on: http://localhost:${PORT}`);
-    console.log(`📁 Uploads directory: ${uploadsDir}`);
-    console.log(`🌐 CORS enabled for: http://localhost:5173`);
-    console.log(`\n📋 Available endpoints:`);
-    console.log(`   - POST /api/v1/upload (field: "file")`);
-    console.log(`   - POST /api/v1/test-upload (debugging)`);
-    console.log(`   - GET  /api/v1/health`);
-    
-    if (!envOk) {
-      console.log(`\n⚠️  WARNING: Some R2 environment variables are missing. File uploads will fail.`);
-    }
+    // console.log(`📁 Uploads directory: ${uploadsDir}`);
+    // console.log(`🌐 CORS enabled for: http://localhost:5173`);
+    // console.log(`\n📋 Available endpoints:`);
+    // console.log(`   - POST /api/v1/upload (field: "file")`);
+    // console.log(`   - POST /api/v1/test-upload (debugging)`);
+    // console.log(`   - GET  /api/v1/health`);
+
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
   }
