@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+.poppins-regular {
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+.mozilla-headline-custom {
+  font-family: "Mozilla Headline", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings:
+    "wdth" 100;
+}
