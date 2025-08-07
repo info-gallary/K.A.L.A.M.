@@ -13,7 +13,7 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/" element={<MainLandingPage />} />
-          <Route path="/report" element={<ReportPage />} />
+          <Route path="/test" element={<ReportPage />} />
           <Route path="/overlay-clouds" element={<OverlayClouds />} />
         </Routes>
       </Router>

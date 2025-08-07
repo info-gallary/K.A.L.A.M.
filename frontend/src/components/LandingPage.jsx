@@ -71,11 +71,11 @@ const LandingPage = () => {
                 </Link>
 
                 <Link
-                  to="/report"
+                  to="/test"
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${themeClasses.navButton}`}
                 >
                   <BarChart3 className="size-6" />
-                  <span className='text-lg'>Reports</span>
+                  <span className='text-lg'>Test Model</span>
                 </Link>
 
                 <button

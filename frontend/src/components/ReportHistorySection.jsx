@@ -8,10 +8,10 @@ const ReportHistorySection = ({
   themeClasses
 }) => {
   return (
-    <div className="flex-1 p-4 overflow-y-auto">
+    <div className="flex-1 p-4 overflow-y-auto relative z-20">
       <h2 className={`text-base font-semibold ${themeClasses.text} mb-3`}>Report History</h2>
       
-      <div className={`${themeClasses.card} border rounded`}>
+      <div className={`${themeClasses.card} border rounded relative z-20`}>
         <div className={`px-4 py-2 border-b ${themeClasses.border}`}>
           <h3 className={`text-sm font-medium ${themeClasses.text}`}>Recent Reports</h3>
         </div>
@@ -19,7 +19,7 @@ const ReportHistorySection = ({
         <div className={`divide-y ${themeClasses.border}`}>
           
           {reportHistory.map((report) => (
-            <div key={report.id} className={`px-4 py-3 ${themeClasses.hover} transition-colors`}>
+            <div key={report.id} className={`px-4 py-3 ${themeClasses.hover} transition-colors relative z-20`}>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h4 className={`text-sm font-medium ${themeClasses.text}`}>{report.name}</h4>

@@ -1,8 +1,11 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 import React, { useState, useCallback, useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 import { useFileSystem } from '../hooks/useFileSystem.jsx';
+import { usePersistentStorage } from '../hooks/usePersistentStorage.jsx';
 
 import EnhancedFileBrowser from '../components/EnhancedFileBrowser';
 import Sidebar from '../components/Sidebar';
@@ -14,43 +17,28 @@ import { axiosInstance } from '../libs/axios.js';
 import toast from 'react-hot-toast';
 
 const ReportPage = () => {
-
-  // Helper function to load from localStorage
-  const loadFromStorage = (key, defaultValue) => {
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-      console.error(`Error loading ${key} from localStorage:`, error);
-      return defaultValue;
-    }
-  };
-
-  // Helper function to save to localStorage
-  const saveToStorage = (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.error(`Error saving ${key} to localStorage:`, error);
-    }
-  };
-
-  const [isDarkMode, setIsDarkMode] = useState(() => loadFromStorage('isDarkMode', true));
-  const [selectedDate, setSelectedDate] = useState(() => loadFromStorage('selectedDate', ''));
-  const [selectedTime, setSelectedTime] = useState(() => loadFromStorage('selectedTime', ''));
-  const [uploadedFiles, setUploadedFiles] = useState(() => loadFromStorage('uploadedFiles', {
+  // Persistent state using your existing hook
+  const [isDarkMode, setIsDarkMode] = usePersistentStorage('isDarkMode', true);
+  const [selectedDate, setSelectedDate] = usePersistentStorage('selectedDate', '');
+  const [selectedTime, setSelectedTime] = usePersistentStorage('selectedTime', '');
+  const [uploadedFiles, setUploadedFiles] = usePersistentStorage('uploadedFiles', {
     'Past Image Frame 4 (T-3)': null,
     'Past Image Frame 3 (T-2)': null,
     'Past Image Frame 2 (T-1)': null,
     'Current Image Frame 1 (T)': null
-  }));
+  });
 
-  // Layout sizing states
-  const [leftWidth, setLeftWidth] = useState(() => loadFromStorage('leftWidth', 280));
-  const [middleHeight, setMiddleHeight] = useState(() => loadFromStorage('middleHeight', 300));
+  // Layout sizing states with persistence
+  const [leftWidth, setLeftWidth] = usePersistentStorage('leftWidth', 280);
+  const [middleHeight, setMiddleHeight] = usePersistentStorage('middleHeight', 400);
+  const [reportHistory, setReportHistory] = usePersistentStorage('reportHistory', []);
+
+  // Processing states - these control global app state
+  const [isModelTesting, setIsModelTesting] = usePersistentStorage('isModelTesting', false);
+  const [isPredicting, setIsPredicting] = usePersistentStorage('isPredicting', false);
+
+  // Non-persistent UI states
   const [isDragging, setIsDragging] = useState(null);
-
-  // UI states
   const [showFileBrowser, setShowFileBrowser] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,70 +59,35 @@ const ReportPage = () => {
     navigateBack
   } = useFileSystem();
 
-  const [reportHistory, setReportHistory] = useState(() => loadFromStorage('reportHistory', []));
-
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    saveToStorage('isDarkMode', isDarkMode);
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    saveToStorage('selectedDate', selectedDate);
-  }, [selectedDate]);
-
-  useEffect(() => {
-    saveToStorage('selectedTime', selectedTime);
-  }, [selectedTime]);
-
-  useEffect(() => {
-    saveToStorage('uploadedFiles', uploadedFiles);
-  }, [uploadedFiles]);
-
-  useEffect(() => {
-    saveToStorage('leftWidth', leftWidth);
-  }, [leftWidth]);
-
-  useEffect(() => {
-    saveToStorage('middleHeight', middleHeight);
-  }, [middleHeight]);
-
-  useEffect(() => {
-    saveToStorage('reportHistory', reportHistory);
-  }, [reportHistory]);
+  // Global processing state - when true, disables all interactions
+  const isProcessing = isModelTesting || isPredicting;
 
   // Restore file previews on component mount
   useEffect(() => {
     const restoreFilePreviews = () => {
       Object.entries(uploadedFiles).forEach(([key, file]) => {
         if (file && !file.localPreview && !file.uploading) {
-          // Check file type for preview logic
           const ext = file.name?.split('.').pop()?.toLowerCase() || '';
           const isPreviewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
           
-          if (isPreviewableImage) {
-            // For R2 files, use the cloud URL as preview
-            if (file.source === 'r2' && file.url) {
-              setUploadedFiles(prev => ({
-                ...prev,
-                [key]: {
-                  ...prev[key],
-                  localPreview: file.url // Use R2 URL as preview
-                }
-              }));
-            }
-            // For local files, we can't restore the blob URL after page reload
-            // The File object data is lost in localStorage serialization
+          if (isPreviewableImage && file.source === 'r2' && file.url) {
+            setUploadedFiles(prev => ({
+              ...prev,
+              [key]: {
+                ...prev[key],
+                localPreview: file.url
+              }
+            }));
           }
         }
       });
     };
 
-    // Small delay to ensure component is fully mounted
     const timer = setTimeout(restoreFilePreviews, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [setUploadedFiles]);
 
-  // Cleanup function for local preview URLs (but not R2 URLs)
+  // Cleanup function for local preview URLs
   useEffect(() => {
     return () => {
       Object.values(uploadedFiles).forEach(file => {
@@ -143,7 +96,21 @@ const ReportPage = () => {
         }
       });
     };
-  }, []);
+  }, [uploadedFiles]);
+
+  // Reset processing states on app load if they were left true (safety measure)
+  useEffect(() => {
+    const resetProcessingStates = () => {
+      if (isModelTesting || isPredicting) {
+        console.log('Resetting processing states on app load');
+        setIsModelTesting(false);
+        setIsPredicting(false);
+      }
+    };
+
+    const timer = setTimeout(resetProcessingStates, 1000);
+    return () => clearTimeout(timer);
+  }, [isModelTesting, isPredicting, setIsModelTesting, setIsPredicting]);
 
   const imageTypes = [
     { key: 'Past Image Frame 4 (T-3)', label: 'Image at T-3 ', description: '90 mins ago' },
@@ -154,11 +121,12 @@ const ReportPage = () => {
 
   // Handle mouse events for resizing
   const handleMouseDown = (type) => {
+    if (isProcessing) return;
     setIsDragging(type);
   };
 
   const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
+    if (!isDragging || isProcessing) return;
 
     if (isDragging === 'left') {
       const newWidth = Math.max(200, Math.min(500, e.clientX));
@@ -167,15 +135,15 @@ const ReportPage = () => {
       const newHeight = Math.max(200, Math.min(600, e.clientY - 60));
       setMiddleHeight(newHeight);
     }
-  }, [isDragging]);
+  }, [isDragging, isProcessing, setLeftWidth, setMiddleHeight]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(null);
   }, []);
 
   // Add mouse event listeners
-  React.useEffect(() => {
-    if (isDragging) {
+  useEffect(() => {
+    if (isDragging && !isProcessing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = isDragging === 'left' ? 'col-resize' : 'row-resize';
@@ -191,10 +159,15 @@ const ReportPage = () => {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handleMouseUp, isProcessing]);
 
   // Open file browser for slot selection
   const openFileBrowser = (slotType) => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     if (!currentDirectoryHandle) {
       alert('Please connect a folder first');
       return;
@@ -206,16 +179,18 @@ const ReportPage = () => {
 
   // Select file and close browser - just select without upload
   const selectFileAndClose = (fileItem) => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     if (fileItem.kind === 'directory') {
       navigateToDirectory(fileItem.handle, fileItem.name);
       return;
     }
 
-    // Check file type for preview logic
     const ext = fileItem.name.split('.').pop()?.toLowerCase() || '';
     const isPreviewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
-    
-    // Create local preview only for previewable images
     const localPreview = isPreviewableImage ? URL.createObjectURL(fileItem.file) : null;
 
     setUploadedFiles(prev => ({
@@ -231,29 +206,29 @@ const ReportPage = () => {
     setShowFileBrowser(false);
     setSelectedSlot(null);
     
-    // Show success message for file selection
     toast.success('File selected successfully!');
   };
 
-  // Handle direct file upload from input - Updated for R2
+  // Handle direct file upload from input
   const handleFileUpload = async (type, event) => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     const file = event.target.files[0];
     if (!file) return;
 
     console.log('Frontend: Starting file upload for type:', type, 'File:', file.name);
 
-    // Check file size - R2 limit
     const maxFileSize = 100 * 1024 * 1024; // 100MB limit for R2
     if (file.size > maxFileSize) {
       toast.error('File is too large. Maximum size is 100MB.');
       return;
     }
 
-    // Check file type for preview logic
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     const isPreviewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
-    
-    // Create local preview only for previewable images
     const localPreview = isPreviewableImage ? URL.createObjectURL(file) : null;
 
     // Show uploading state immediately
@@ -271,7 +246,7 @@ const ReportPage = () => {
 
     try {
       const formData = new FormData();
-      formData.append('file', file); // FIXED: Changed from 'image' to 'file'
+      formData.append('file', file);
       
       console.log('Frontend: FormData created with field "file":', {
         fileName: file.name,
@@ -283,7 +258,7 @@ const ReportPage = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 120000, // 2 minutes
+        timeout: 120000,
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           toast.loading(`Uploading... ${percent}%`, { id: toastId });
@@ -297,7 +272,7 @@ const ReportPage = () => {
         [type]: {
           ...prev[type],
           url: fileUrl,
-          source: 'r2', // Changed from 'cloudinary' to 'r2'
+          source: 'r2',
           uploading: false
         }
       }));
@@ -329,35 +304,36 @@ const ReportPage = () => {
     }
   };
 
-  // Handle file upload from browser (separate function) - Updated for R2
+  // Handle file upload from browser
   const handleBrowserFileUpload = async (file, progressCallback) => {
+    if (isProcessing) {
+      throw new Error('Please wait for current operation to complete');
+    }
+    
     console.log('Frontend: Browser file upload starting:', file.name);
     
-    // Check file size
     const maxFileSize = 100 * 1024 * 1024; // 100MB limit
     if (file.size > maxFileSize) {
       throw new Error('File is too large. Maximum size is 100MB.');
     }
 
     const formData = new FormData();
-    formData.append('file', file); // FIXED: Changed from 'image' to 'file'
+    formData.append('file', file);
 
     try {
       const response = await axiosInstance.post('/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 120000, // 2 minutes
+        timeout: 120000,
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           if (progressCallback) progressCallback(percent);
         }
       });
 
-      // After successful upload, update the file in uploadedFiles with R2 URL
       const fileUrl = response.data?.data?.url;
       
-      // Check file type for preview logic
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
       const isPreviewableImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
       const localPreview = isPreviewableImage ? URL.createObjectURL(file) : null;
@@ -378,7 +354,6 @@ const ReportPage = () => {
       return response.data;
     } catch (error) {
       console.error('Frontend: Browser upload error:', error);
-      // Better error handling
       if (error.code === 'ECONNABORTED') {
         throw new Error('Upload timeout - file may be too large or connection is slow');
       } else if (error.response) {
@@ -391,8 +366,13 @@ const ReportPage = () => {
     }
   };
 
-  // Handle browser file upload from the assignment section - Updated for R2
+  // Handle browser file upload from the assignment section
   const handleBrowserUpload = async (type) => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     const file = uploadedFiles[type];
     if (!file) return;
 
@@ -401,7 +381,6 @@ const ReportPage = () => {
     const toastId = toast.loading('Uploading...');
 
     try {
-      // Set uploading state
       setUploadedFiles(prev => ({
         ...prev,
         [type]: {
@@ -411,7 +390,7 @@ const ReportPage = () => {
       }));
 
       const formData = new FormData();
-      formData.append('file', file); // FIXED: Changed from 'image' to 'file'
+      formData.append('file', file);
 
       const response = await axiosInstance.post('/upload', formData, {
         headers: {
@@ -452,7 +431,6 @@ const ReportPage = () => {
       toast.error(errorMessage, { id: toastId });
       console.error('Frontend: Assignment upload error:', error);
       
-      // Reset uploading state on error
       setUploadedFiles(prev => ({
         ...prev,
         [type]: {
@@ -464,23 +442,27 @@ const ReportPage = () => {
   };
 
   const removeFile = (type) => {
-    // Clean up local preview URL if it exists and it's a blob URL
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     if (uploadedFiles[type]?.localPreview && uploadedFiles[type]?.localPreview?.startsWith('blob:')) {
       URL.revokeObjectURL(uploadedFiles[type].localPreview);
     }
     
-    const newUploadedFiles = {
-      ...uploadedFiles,
+    setUploadedFiles(prev => ({
+      ...prev,
       [type]: null
-    };
-    
-    setUploadedFiles(newUploadedFiles);
-    
-    // Also update localStorage immediately
-    saveToStorage('uploadedFiles', newUploadedFiles);
+    }));
   };
 
   const generateReport = () => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     if (!selectedDate || !selectedTime) {
       alert('Please select date and time first');
       return;
@@ -496,7 +478,7 @@ const ReportPage = () => {
     const source = hasBrowser ? 'File Browser' : 'Manual Upload';
 
     const newReport = {
-      id: Date.now(), // Use timestamp for unique ID
+      id: Date.now(),
       name: `Analysis Report #${String(reportHistory.length + 1).padStart(3, '0')}`,
       date: selectedDate,
       time: selectedTime,
@@ -519,27 +501,31 @@ const ReportPage = () => {
   };
 
   const deleteReport = (id) => {
-    const newReportHistory = reportHistory.filter(report => report.id !== id);
-    setReportHistory(newReportHistory);
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
+    setReportHistory(prev => prev.filter(report => report.id !== id));
   };
 
   const toggleTheme = () => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
     setIsDarkMode(!isDarkMode);
   };
 
-  // Clear all data function (optional - for debugging or reset)
   const clearAllData = () => {
+    if (isProcessing) {
+      toast.error('Please wait for current operation to complete');
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-      // Clear all localStorage
-      localStorage.removeItem('isDarkMode');
-      localStorage.removeItem('selectedDate');
-      localStorage.removeItem('selectedTime');
-      localStorage.removeItem('uploadedFiles');
-      localStorage.removeItem('leftWidth');
-      localStorage.removeItem('middleHeight');
-      localStorage.removeItem('reportHistory');
+      localStorage.clear();
       
-      // Reset all state
       setIsDarkMode(true);
       setSelectedDate('');
       setSelectedTime('');
@@ -550,8 +536,10 @@ const ReportPage = () => {
         'Current Image Frame 1 (T)': null
       });
       setLeftWidth(280);
-      setMiddleHeight(300);
+      setMiddleHeight(400);
       setReportHistory([]);
+      setIsModelTesting(false);
+      setIsPredicting(false);
       
       toast.success('Cache Cleared');
     }
@@ -559,16 +547,13 @@ const ReportPage = () => {
 
   // Filter files for search and supported formats
   const filteredFiles = currentFiles.filter(item => {
-    // First filter by search term
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.type.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (!matchesSearch) return false;
     
-    // If it's a directory, always show it
     if (item.kind === 'directory') return true;
     
-    // For files, show all supported formats including H5
     const ext = item.name.split('.').pop()?.toLowerCase() || '';
     const supportedFormats = ['jpg', 'jpeg', 'png', 'tif', 'tiff', 'h5', 'hdf5', 'gif', 'bmp', 'webp'];
     
@@ -592,11 +577,9 @@ const ReportPage = () => {
     card: isDarkMode ? 'bg-stone-800 border-stone-700' : 'bg-white border-stone-200',
     accent: '#C15F3C',
     accentSecondary: '#da7756',
-
-    success: isDarkMode ? 'text-teal-400' : 'text-teal-600',
-    successBg: isDarkMode ? 'bg-teal-900/20' : 'bg-teal-50',
-    successBorder: isDarkMode ? 'border-teal-700' : 'border-teal-200',
-
+    success: isDarkMode ? 'text-stone-100' : 'text-stone-600',
+    successBg: isDarkMode ? 'bg-stone-900/20' : 'bg-stone-100',
+    successBorder: isDarkMode ? 'border-orange-700/60' : 'border-orange-500',
     error: isDarkMode ? 'text-red-400' : 'text-red-600',
     errorHover: isDarkMode ? 'hover:text-red-300' : 'hover:text-red-700',
     errorBg: isDarkMode ? 'bg-red-900/20' : 'bg-red-50',
@@ -606,39 +589,29 @@ const ReportPage = () => {
   };
 
   return (
-    <div className={`min-h-screen ${themeClasses.bg}`}>
-      {/* Theme Toggle Button */}
-      <button
-        onClick={toggleTheme}
-        className={`fixed top-6 right-6 z-50 p-3 rounded-lg ${themeClasses.buttonBg} ${themeClasses.button} transition-colors shadow-lg`}
-        style={{ backgroundColor: isDarkMode ? themeClasses.buttonBg : themeClasses.accent }}
-      >
-        {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-      </button>
-
-      {/* Debug: Clear Data Button (optional - can be removed in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <button
-          onClick={clearAllData}
-          className={` fixed top-6 right-20 z-50 py-3.5 px-3 font-semibold rounded-lg bg-stone-600 text-white text-xs transition-colors shadow-lg hover:bg-[#C15F3C] cursor-pointer `}
-          title="Clear all saved data (Development only)"
-        >
-          Clear Cache
-        </button>
+    <div className={`min-h-screen ${themeClasses.bg} ${isProcessing ? 'overflow-hidden' : ''}`}>
+      {/* Processing Status Indicator - Only this stays at top center */}
+      {isProcessing && (
+        <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg ${themeClasses.card} border shadow-lg flex items-center space-x-2`}>
+          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+          <span className={`text-sm ${themeClasses.text} font-medium`}>
+            {isPredicting ? 'AI Prediction in Progress...' : 'Model Testing in Progress...'}
+          </span>
+        </div>
       )}
 
       {/* Data Persistence Indicator */}
       <div className={`fixed bottom-6 right-6 z-40 p-2 rounded-lg ${themeClasses.bgSecondary} ${themeClasses.border} border text-xs ${themeClasses.textMuted}`}>
         <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span>Cache Memory Saved</span>
+          <div className={`w-2 h-2 rounded-full ${isProcessing ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+          <span>{isProcessing ? 'Processing...' : 'Cache Memory Saved'}</span>
         </div>
       </div>
 
       {/* Enhanced File Browser Modal */}
       <EnhancedFileBrowser
-        showModal={showFileBrowser}
-        onClose={() => setShowFileBrowser(false)}
+        showModal={showFileBrowser && !isProcessing}
+        onClose={() => !isProcessing && setShowFileBrowser(false)}
         selectedSlot={selectedSlot}
         imageTypes={imageTypes}
         currentPath={currentPath}
@@ -657,7 +630,7 @@ const ReportPage = () => {
       />
 
       {/* Main Layout */}
-      <div className="flex h-screen">
+      <div className={`flex h-screen ${isProcessing ? 'pointer-events-none' : ''}`}>
         {/* Left Sidebar */}
         <Sidebar
           leftWidth={leftWidth}
@@ -687,7 +660,7 @@ const ReportPage = () => {
 
         {/* Right Content */}
         <div className="flex-1 flex flex-col">
-          {/* File Assignment Section */}
+          {/* Enhanced File Assignment Section with Tabs - Now includes theme toggle and clear cache */}
           <FileAssignmentSection
             middleHeight={middleHeight}
             imageTypes={imageTypes}
@@ -698,6 +671,14 @@ const ReportPage = () => {
             handleBrowserUpload={handleBrowserUpload}
             removeFile={removeFile}
             themeClasses={themeClasses}
+            isModelTesting={isModelTesting}
+            setIsModelTesting={setIsModelTesting}
+            isPredicting={isPredicting}
+            setIsPredicting={setIsPredicting}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+            clearAllData={clearAllData}
+            isProcessing={isProcessing}
           />
 
           {/* Horizontal Resizer */}
