@@ -3,8 +3,11 @@ import {config} from 'dotenv'
 import cors from 'cors';
 import fs from 'fs';
 
+
+
 import {connectDB} from './utils/db.js'
 import r2Routes from './routes/r2upload.routes.js'
+import testRoutes from './routes/modelTest.routes.js'
 
 config();
 const app = express();
@@ -65,6 +68,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1', r2Routes);
+app.use('/api/v1', testRoutes);
 
 // Global error handling
 app.use((error, req, res, next) => {
