@@ -28,7 +28,7 @@ const Sidebar = ({
       <h2 className={`text-base font-semibold ${themeClasses.text} mb-4`}>Report Settings</h2>
       
       {/* Date and Time Selection */}
-      <div className="space-y-3 mb-4">
+      {/* <div className="space-y-3 mb-4">
         <div>
           <label className={`block text-xs font-medium ${themeClasses.textSecondary} mb-1`}>
             <Calendar className="inline w-3 h-3 mr-1" />
@@ -54,7 +54,7 @@ const Sidebar = ({
             className={`w-full px-2 py-1.5 text-xs ${themeClasses.input} ${themeClasses.border} border rounded focus:ring-1`}
           />
         </div>
-      </div>
+      </div> */}
 
       {/* Browser Support Notice */}
       {!isSupported && (

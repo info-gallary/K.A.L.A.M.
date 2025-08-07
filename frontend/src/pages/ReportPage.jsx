@@ -562,6 +562,7 @@ const ReportPage = () => {
 
   // Theme classes
   const themeClasses = {
+    // input: isDarkMode ? 'bg-stone-800 text-stone-100' : 'bg-white text-stone-900',
     bg: isDarkMode ? 'bg-stone-900' : 'bg-neutral-50',
     bgSecondary: isDarkMode ? 'bg-stone-800' : 'bg-stone-100',
     bgTertiary: isDarkMode ? 'bg-stone-700' : 'bg-white',
@@ -682,19 +683,19 @@ const ReportPage = () => {
           />
 
           {/* Horizontal Resizer */}
-          <Resizer
+          {/* <Resizer
             direction="horizontal"
             onMouseDown={() => handleMouseDown('middle')}
             themeClasses={themeClasses}
             isDragging={isDragging === 'middle'}
-          />
+          /> */}
 
           {/* Report History */}
-          <ReportHistorySection
+          {/* <ReportHistorySection
             reportHistory={reportHistory}
             deleteReport={deleteReport}
             themeClasses={themeClasses}
-          />
+          /> */}
         </div>
       </div>
     </div>

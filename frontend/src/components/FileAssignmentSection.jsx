@@ -24,7 +24,7 @@ import {
   Moon
 } from 'lucide-react';
 
-import ModelTestAndTerminalPreview from './ModelTestAndTerminalPreview';
+import ModelTestAndTerminalPreview from './ModelTestAndTerminalPreview.jsx';
 
 const FileAssignmentSection = ({
   middleHeight,
@@ -157,7 +157,7 @@ const FileAssignmentSection = ({
 
   // Handle test folder selection
   // const handleTestFolderSelection = async () => {
-  
+
   //   try {
   //     await axiosInstance.post('/folder-path', {
   //       folderPath: testFolder
@@ -642,36 +642,28 @@ const FileAssignmentSection = ({
                 )}
               </div>
 
-         
-                <div className="text-center py-8">
-                  <Folder className={`w-12 h-12 mx-auto mb-3 ${themeClasses.textMuted} opacity-50`} />
-                  <p className={`text-sm ${themeClasses.textMuted} mb-4`}>
-                    Select a folder containing test data files
-                  </p>
-                  <input
-                    type="text"
-                    placeholder="Paste full folder path"
-                    value={testFolder}
-                    onChange={(e) => setTestFolder(e.target.value)}
-                    className=" text-amber-50 border-2 rounded-xl  border-orange-600/60 outline-none  p-2  w-full"
-                  />
-                  {/* <button
-                    onClick={handleModelTesting}
-                    disabled={isProcessing}
-                    className={`w-full flex items-center space-x-2 px-4 py-2 text-center mt-2 text-sm rounded-lg font-medium transition-all ${isProcessing
-                      ? 'opacity-50 cursor-not-allowed bg-gray-400'
-                      : 'text-white hover:opacity-90 transform '
-                      }`}
-                    style={{ backgroundColor: isProcessing ? '#666' : themeClasses.accent }}
-                  >
-                    <span>Continue</span>
-                  </button> */}
+
+              <div className="text-center py-8">
+                <Folder className={`w-12 h-12 mx-auto mb-3 ${themeClasses.textMuted} opacity-50`} />
+                <p className={`text-sm ${themeClasses.textMuted} mb-4`}>
+                  Select a folder containing test data files
+                </p>
+                <input
+                  type="text"
+                  placeholder="Paste full folder path"
+                  value={testFolder}
+                  onChange={(e) => setTestFolder(e.target.value)}
+                  className={` ${themeClasses.input}  border-2 rounded-lg  border-orange-600/60 outline-none  p-2  w-full`}
+                />
+          
 
 
+                <div className='mt-4'>
                   <ModelTestAndTerminalPreview testFolder={testFolder} />
                 </div>
-        
-                {/* <div className={`p-3 rounded ${themeClasses.successBg} border ${themeClasses.successBorder}`}>
+              </div>
+
+              {/* <div className={`p-3 rounded ${themeClasses.successBg} border ${themeClasses.successBorder}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <CheckCircle className={`w-5 h-5 ${themeClasses.success}`} />
@@ -692,8 +684,8 @@ const FileAssignmentSection = ({
                     </button>
                   </div> */}
 
-                  {/* Preview of test files */}
-                  {/* {testFolder.files.length > 0 && (
+              {/* Preview of test files */}
+              {/* {testFolder.files.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <p className={`text-xs ${themeClasses.textMuted} mb-2`}>Preview (first 10 files):</p>
                       <div className="grid grid-cols-2 gap-1 text-xs">
@@ -711,42 +703,11 @@ const FileAssignmentSection = ({
                       )}
                     </div>
                   )} */}
-                {/* </div> */}
-              
+              {/* </div> */}
+
             </div>
 
-            {/* Model Testing Button */}
-            {testFolder && (
-              <div className={`${themeClasses.card} border rounded p-4`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg`} style={{ backgroundColor: `${themeClasses.accent}20` }}>
-                      <TestTube className="w-5 h-5" style={{ color: themeClasses.accent }} />
-                    </div>
-                    <div>
-                      <h3 className={`text-sm font-medium ${themeClasses.text}`}>Model Validation</h3>
-                      <p className={`text-xs ${themeClasses.textMuted}`}>
-                        Run comprehensive testing on your AI model
-                      </p>
-                    </div>
-                  </div>
-
-
-                  {/* <button
-                    onClick={handleModelTesting}
-                    disabled={isProcessing}
-                    className={`flex items-center space-x-2 px-4 py-2 text-sm rounded-lg font-medium transition-all ${!isProcessing
-                      ? 'text-white hover:opacity-90 transform hover:scale-105'
-                      : 'opacity-50 cursor-not-allowed'
-                      }`}
-                    style={{ backgroundColor: !isProcessing ? themeClasses.accent : '#666' }}
-                  >
-                    <Play className="w-4 h-4" />
-                    <span>Run Tests</span>
-                  </button> */}
-                </div>
-              </div>
-            )}
+     
 
             {/* Test Results */}
             {testResults && (
@@ -839,7 +800,7 @@ const FileAssignmentSection = ({
                   </div>
                 </div>
 
-             
+
               </div>
             )}
 
