@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sun, Moon, ArrowUpRight, Cloud, BarChart3 } from 'lucide-react';
+import { Sun, Moon, ArrowUpRight, Cloud, BarChart3, Play,Map   } from 'lucide-react';
 import RotatingText from './RotatingText';
 import { Link } from 'react-router-dom';
 
@@ -66,8 +66,8 @@ const LandingPage = () => {
                   to='/overlay-clouds'
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${themeClasses.navButton}`}
                 >
-                  <Cloud className="size-6" />
-                  <span className='text-lg'>Chase the Cloud</span>
+                  <Map className="size-6" />
+                  <span className='text-lg'>Visualize On Map</span>
                 </Link>
 
                 <Link
@@ -76,6 +76,16 @@ const LandingPage = () => {
                 >
                   <BarChart3 className="size-6" />
                   <span className='text-lg'>Test Model</span>
+                </Link>
+
+                <Link
+                  to="/satellite-animation"
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${themeClasses.navButton}`}
+                >
+                  {/* <Play className="size-6" />
+                   */}
+                   <Cloud className="size-6" />
+                  <span className='text-lg'>Chase The Cloud</span>
                 </Link>
 
                 <button
@@ -139,25 +149,27 @@ const LandingPage = () => {
 
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     {/* Primary Button - Claude Brand Color */}
-                    <button
-                      className={`group flex items-center justify-center space-x-2 px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] shadow-sm ${themeClasses.primaryButton}`}
+                    <Link
+                      to="/satellite-animation"
+                      className={`text-white group flex items-center justify-center space-x-2 px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] shadow-sm ${themeClasses.primaryButton}`}
                       style={{ 
                         backgroundColor: themeClasses.accent,
                         boxShadow: darkMode ? '0 1px 3px rgba(193, 95, 60, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.2)'
                       }}
                     >
-                      <Cloud className="w-4 h-4" />
+                      <Play className="w-4 h-4 " />
                       <span>Get Started</span>
                       <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                    </button>
+                    </Link>
 
                     {/* Secondary Button */}
-                    <button
+                    <Link
+                      to="/test"
                       className={`group flex items-center justify-center space-x-2 px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] border ${themeClasses.secondaryButton}`}
                     >
                       <BarChart3 className="w-4 h-4" />
                       <span>View Reports</span>
-                    </button>
+                    </Link>
                   </div>
                 </div>
 

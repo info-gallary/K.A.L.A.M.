@@ -1,0 +1,5 @@
+project_structure.text
+node_modules/
+.env
+test/
+test_sorted_bands/

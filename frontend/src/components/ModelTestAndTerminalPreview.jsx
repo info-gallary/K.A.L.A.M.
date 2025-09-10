@@ -59,7 +59,7 @@ export default function ModelTestAndTerminalPreview({ testFolder, themeClasses =
         className={`flex items-center space-x-2 px-4 py-2 text-sm rounded-lg font-medium transition-all ${
           testFolder
             ? 'text-white hover:opacity-90 transform hover:scale-105'
-            : 'opacity-50 cursor-not-allowed'
+            : ' text-white opacity-80 cursor-not-allowed'
         }`}
         style={{ backgroundColor: testFolder ? theme.accent : '#666' }}
       >

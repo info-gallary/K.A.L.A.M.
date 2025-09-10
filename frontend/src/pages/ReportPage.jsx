@@ -30,7 +30,7 @@ const ReportPage = () => {
 
   // Layout sizing states with persistence
   const [leftWidth, setLeftWidth] = usePersistentStorage('leftWidth', 280);
-  const [middleHeight, setMiddleHeight] = usePersistentStorage('middleHeight', 400);
+  const [middleHeight, setMiddleHeight] = usePersistentStorage('middleHeight', 650);
   const [reportHistory, setReportHistory] = usePersistentStorage('reportHistory', []);
 
   // Processing states - these control global app state
@@ -523,7 +523,7 @@ const ReportPage = () => {
       return;
     }
     
-    if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+    // if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
       localStorage.clear();
       
       setIsDarkMode(true);
@@ -536,13 +536,13 @@ const ReportPage = () => {
         'Current Image Frame 1 (T)': null
       });
       setLeftWidth(280);
-      setMiddleHeight(400);
+      setMiddleHeight(650);
       setReportHistory([]);
       setIsModelTesting(false);
       setIsPredicting(false);
       
       toast.success('Cache Cleared');
-    }
+    // }
   };
 
   // Filter files for search and supported formats
@@ -564,7 +564,7 @@ const ReportPage = () => {
   const themeClasses = {
     // input: isDarkMode ? 'bg-stone-800 text-stone-100' : 'bg-white text-stone-900',
     bg: isDarkMode ? 'bg-stone-900' : 'bg-neutral-50',
-    bgSecondary: isDarkMode ? 'bg-stone-800' : 'bg-stone-100',
+    bgSecondary: isDarkMode ? 'bg-stone-800' : 'bg-stone-200',
     bgTertiary: isDarkMode ? 'bg-stone-700' : 'bg-white',
     text: isDarkMode ? 'text-stone-100' : 'text-stone-900',
     textSecondary: isDarkMode ? 'text-stone-300' : 'text-stone-600',
@@ -592,14 +592,14 @@ const ReportPage = () => {
   return (
     <div className={`min-h-screen ${themeClasses.bg} ${isProcessing ? 'overflow-hidden' : ''}`}>
       {/* Processing Status Indicator - Only this stays at top center */}
-      {isProcessing && (
+      {/* {isProcessing && (
         <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg ${themeClasses.card} border shadow-lg flex items-center space-x-2`}>
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
           <span className={`text-sm ${themeClasses.text} font-medium`}>
             {isPredicting ? 'AI Prediction in Progress...' : 'Model Testing in Progress...'}
           </span>
         </div>
-      )}
+      )} */}
 
       {/* Data Persistence Indicator */}
       <div className={`fixed bottom-6 right-6 z-40 p-2 rounded-lg ${themeClasses.bgSecondary} ${themeClasses.border} border text-xs ${themeClasses.textMuted}`}>
