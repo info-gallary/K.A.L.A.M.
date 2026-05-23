@@ -8,7 +8,7 @@
     from multispectral INSAT satellite imagery.
   </p>
   <p>
-    <strong>Team DOMinators</strong> | ISRO Bharatiya Antariksh Hackathon (BAH) 2025 recognition
+    <strong>Team DOMinators</strong> | ISRO Bharatiya Antariksh Hackathon (BAH) 2025 winners (National 2nd)
   </p>
 </div>
 
