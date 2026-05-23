@@ -92,9 +92,9 @@ flowchart LR
 ### Inference Outputs
 
 <div align="center">
-  <img src="Python-Backend/inference_outputs/inference/predicted_t5.png" alt="Predicted T5" width="30%" />
-  <img src="Python-Backend/inference_outputs/inference/predicted_t6.png" alt="Predicted T6" width="30%" />
-  <img src="Python-Backend/inference_outputs/inference/predicted_t7.png" alt="Predicted T7" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t5_IMG_TIR1.png" alt="Predicted T5 - TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t6_IMG_TIR1.png" alt="Predicted T6 - TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t7_IMG_TIR1.png" alt="Predicted T7 - TIR1" width="30%" />
 </div>
 
 <p align="center">
