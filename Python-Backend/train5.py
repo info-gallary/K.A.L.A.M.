@@ -1,14 +1,3 @@
-"""
-Novel Cloud Motion Forecasting Research Prototype
--------------------------------------------------
-Architecture: Conditional DDPM + GCN Bottleneck + PiNN Practicality Loss + SSL Teacher Loop + Meta-Learner Correction
-
-Input  : [B, 4, 6, H, W]  -> previous 4 multispectral INSAT frames
-Target : [B, 3, 6, H, W]  -> next 3 multispectral INSAT frames
-
-This file intentionally avoids torch_geometric so it can run with normal PyTorch.
-"""
-
 import os
 import math
 import time
@@ -34,13 +23,7 @@ logger = logging.getLogger(__name__)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-
-# ============================================================
-# 1. DATASET: 4 input frames -> 3 future frames
-# ============================================================
 class SatelliteSequenceDataset(Dataset):
-    """Loads timestamp-aligned multispectral satellite frame sequences."""
-
     def __init__(self, base_dir, channels, sequence_length=4, prediction_length=3, img_size=(256, 256), augment=True):
         self.base_dir = Path(base_dir)
         self.channels = channels
@@ -75,7 +58,6 @@ class SatelliteSequenceDataset(Dataset):
         return img.astype(np.float32) / 255.0
 
     def _augment_consistent(self, frames):
-        """Same spatial transform for all frames to preserve temporal physics."""
         if not self.augment:
             return frames
         if random.random() < 0.5:
@@ -130,13 +112,7 @@ class SatelliteSequenceDataset(Dataset):
             "target": torch.tensor(sample["target"], dtype=torch.float32),
         }
 
-
-# ============================================================
-# 2. DIFFUSION SCHEDULE
-# ============================================================
 class DiffusionSchedule:
-    """DDPM forward process q(x_t | x_0)."""
-
     def __init__(self, timesteps=1000, beta_start=1e-4, beta_end=0.02):
         self.timesteps = timesteps
         betas = torch.linspace(beta_start, beta_end, timesteps)
@@ -155,10 +131,6 @@ class DiffusionSchedule:
         om = self.sqrt_one_minus_alphas_cumprod[t].view(-1, 1, 1, 1, 1)
         return a * x0 + om * noise, noise
 
-
-# ============================================================
-# 3. MODEL BLOCKS
-# ============================================================
 class SinusoidalTimeEmbedding(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -194,11 +166,6 @@ class ResBlock(nn.Module):
 
 
 class GridGCNBottleneck(nn.Module):
-    """
-    Lightweight spatial GCN over latent grid.
-    Each latent cell aggregates information from 4-neighbour cells, approximating cloud-flow relational propagation.
-    """
-
     def __init__(self, channels, layers=2):
         super().__init__()
         self.layers = nn.ModuleList([nn.Conv2d(channels, channels, 1) for _ in range(layers)])
@@ -220,8 +187,6 @@ class GridGCNBottleneck(nn.Module):
 
 
 class MetaCorrectionLearner(nn.Module):
-    """Learns sample-adaptive residual correction after denoising."""
-
     def __init__(self, channels):
         super().__init__()
         self.err_estimator = nn.Sequential(
@@ -240,11 +205,6 @@ class MetaCorrectionLearner(nn.Module):
 
 
 class ConditionalGCNPiNNDenoiser(nn.Module):
-    """
-    Conditional diffusion denoiser.
-    It predicts noise epsilon for DDPM training, conditioned on previous satellite frames.
-    """
-
     def __init__(self, in_frames=4, out_frames=3, bands=6, base=64, time_dim=128):
         super().__init__()
         self.out_frames = out_frames
@@ -299,10 +259,6 @@ class ConditionalGCNPiNNDenoiser(nn.Module):
         corrected_noise = self.meta(raw_noise, self.cond_summary(cond_feat))
         return corrected_noise.view(b, tf, c, h, w)
 
-
-# ============================================================
-# 4. PiNN + SSL LOSSES
-# ============================================================
 def gradient_xy(x):
     dx = x[..., :, 1:] - x[..., :, :-1]
     dy = x[..., 1:, :] - x[..., :-1, :]
@@ -310,31 +266,20 @@ def gradient_xy(x):
 
 
 def pinn_practicality_loss(pred_x0, condition):
-    """
-    Physics-informed practicality constraints for cloud motion:
-    1) spatial smoothness: clouds move as coherent masses, not pixel-wise noise;
-    2) temporal acceleration regularity: future frames should not jerk unrealistically;
-    3) spectral consistency: spectral bands should remain physically correlated across time.
-    """
-    # Spatial smoothness
     dx, dy = gradient_xy(pred_x0)
     spatial = dx.abs().mean() + dy.abs().mean()
 
-    # Temporal acceleration smoothness across 3 future frames
     v1 = pred_x0[:, 1] - pred_x0[:, 0]
     v2 = pred_x0[:, 2] - pred_x0[:, 1]
     accel = F.smooth_l1_loss(v2, v1)
 
-    # Continuity from last observed input to first predicted frame
     continuity = F.smooth_l1_loss(pred_x0[:, 0], condition[:, -1])
 
-    # Spectral practicality: adjacent channels should not diverge violently
     spectral = torch.mean(torch.abs(pred_x0[:, :, 1:] - pred_x0[:, :, :-1]))
     return 0.20 * spatial + 0.35 * accel + 0.35 * continuity + 0.10 * spectral
 
 
 def ssl_teacher_consistency_loss(student_noise, teacher_model, x_t_aug, cond_aug, t):
-    """Self-supervised loop: student prediction must match EMA teacher on augmented unlabeled/noisy views."""
     with torch.no_grad():
         teacher_noise = teacher_model(x_t_aug, cond_aug, t)
     return F.smooth_l1_loss(student_noise, teacher_noise)
@@ -351,10 +296,6 @@ def update_ema(teacher, student, decay=0.995):
         for tp, sp in zip(teacher.parameters(), student.parameters()):
             tp.data.mul_(decay).add_(sp.data, alpha=1 - decay)
 
-
-# ============================================================
-# 5. TRAINING / VALIDATION
-# ============================================================
 def calculate_metrics(pred, target):
     pred_np = pred.detach().cpu().numpy()
     target_np = target.detach().cpu().numpy()
@@ -372,7 +313,6 @@ def calculate_metrics(pred, target):
 
 @torch.no_grad()
 def predict_x0_fast(model, condition, schedule, steps=25):
-    """Fast DDIM-like inference approximation for validation/demo."""
     b, _, c, h, w = condition.shape
     x = torch.randn(b, 3, c, h, w, device=condition.device)
     time_grid = torch.linspace(schedule.timesteps - 1, 0, steps, device=condition.device).long()
@@ -380,7 +320,6 @@ def predict_x0_fast(model, condition, schedule, steps=25):
         t = torch.full((b,), int(t_scalar.item()), device=condition.device, dtype=torch.long)
         eps = model(x, condition, t)
         x0 = reconstruct_x0_from_noise(x, eps, t, schedule)
-        # Simple deterministic step toward x0; enough for validation trend.
         x = 0.85 * x + 0.15 * x0
     return torch.clamp(x, 0, 1)
 
@@ -420,7 +359,7 @@ def train_novel_model(
     scaler = GradScaler() if device == "cuda" else None
 
     best_score = -1e9
-    logger.info("Novel model parameters: %.2f M", sum(p.numel() for p in model.parameters()) / 1e6)
+    logger.info("Model parameters: %.2f M", sum(p.numel() for p in model.parameters()) / 1e6)
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -462,7 +401,6 @@ def train_novel_model(
 
         scheduler.step()
 
-        # Validation every 2 epochs to save time.
         val_psnr, val_ssim = 0.0, 0.0
         if epoch % 2 == 0 or epoch == epochs:
             model.eval()
@@ -500,12 +438,9 @@ def train_novel_model(
     return model
 
 
-# ============================================================
-# 6. ENTRY POINT
-# ============================================================
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="Novel Conditional Diffusion + GCN + PiNN + SSL cloud forecasting")
+    parser = argparse.ArgumentParser(description="Conditional diffusion cloud forecasting")
     parser.add_argument("--data", type=str, required=True, help="Dataset directory containing channel folders")
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--batch", type=int, default=2)
