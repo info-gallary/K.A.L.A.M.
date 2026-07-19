@@ -1,36 +1,46 @@
-# Project KALAM — Physics-Informed Atmospheric Nowcasting & Visualization
-
-**National Runner-up (2nd Place), ISRO Bhartiya Antariksh Hackathon 2025.** Built by Team DOMinators.
-
-Project KALAM is a near-term (T+1…T+3) atmospheric nowcasting system for INSAT multi-spectral satellite imagery, paired with a full web application for map-based exploration, animation, and model report views. It combines a Python research/serving ML pipeline, a Node.js/Express API with WebSocket live logs, Cloudflare R2 storage, MongoDB persistence, and a React + Vite + Tailwind UI.
-
-This README is the single source of truth for the project — architecture, measured results, reproduction steps, and known limitations.
+<div align="center">
+  <img src="frontend/public/sir_kalam.png" alt="Project K.A.L.A.M." width="160" />
+  <h1>K.A.L.A.M.</h1>
+  <h3>Knowledge-guided Atmospheric Learning for Adaptive Motion Forecasting</h3>
+  <p><strong>Team DOMinators</strong> — National Runner-up (2nd Place), ISRO Bhartiya Antariksh Hackathon 2025</p>
+</div>
 
 ---
 
+K.A.L.A.M. is a near-term (T+1…T+3) atmospheric nowcasting system for INSAT multi-spectral satellite imagery, paired with a full web application for map-based exploration, animation, and model report views. It combines a Python research/serving ML pipeline, a Node.js/Express API with WebSocket live logs, Cloudflare R2 storage, MongoDB persistence, and a React + Vite + Tailwind UI.
+
+This README is the single source of truth for the project — architecture, measured results, reproduction steps, and known limitations.
+
 ## Table of Contents
+
 1. [Monorepo Layout](#monorepo-layout)
 2. [Tech Stack](#tech-stack)
-3. [ML Architecture (Python-Backend)](#ml-architecture-python-backend)
-4. [Measured Results](#measured-results)
-5. [Reproducibility](#reproducibility)
-6. [Python-Backend Structure](#python-backend-structure)
-7. [Experimental / Future Work](#experimental--future-work)
-8. [Known Limitations](#known-limitations)
-9. [Full-Stack Quick Start](#full-stack-quick-start)
-10. [API Overview](#api-overview-backend)
-11. [Frontend Highlights](#frontend-highlights)
-12. [Troubleshooting](#troubleshooting)
-13. [Acknowledgements & License](#acknowledgements--license)
+3. [Pipeline At A Glance](#pipeline-at-a-glance)
+4. [Visual Results](#visual-results)
+5. [ML Architecture (Python-Backend)](#ml-architecture-python-backend)
+6. [Measured Results](#measured-results)
+7. [Reproducibility](#reproducibility)
+8. [Python-Backend Structure](#python-backend-structure)
+9. [Experimental / Future Work](#experimental--future-work)
+10. [Known Limitations](#known-limitations)
+11. [Full-Stack Quick Start](#full-stack-quick-start)
+12. [API Overview](#api-overview-backend)
+13. [Frontend Highlights](#frontend-highlights)
+14. [Troubleshooting](#troubleshooting)
+15. [Citation](#citation)
+16. [Acknowledgements & License](#acknowledgements--license)
 
 ---
 
 ## Monorepo Layout
+
 - `frontend/` — React/Vite app (UI, animations, map visualization, reports)
 - `backend/` — Express API + WebSocket server + R2 uploads + MongoDB
 - `Python-Backend/` — ML research, training, and serving pipeline (see below)
+- `Inference/` — a small, curated example sequence (input tensor + predicted PNGs + metrics) for a quick look without running the pipeline
 
 ## Tech Stack
+
 - **Frontend:** React 19, Vite, Tailwind CSS, react-router, lucide-react
 - **Backend:** Node.js, Express, WebSocket (`ws`), Multer, MongoDB (Mongoose)
 - **Storage:** Cloudflare R2 via AWS SDK v3
@@ -38,26 +48,62 @@ This README is the single source of truth for the project — architecture, meas
 
 ---
 
+## Pipeline At A Glance
+
+```mermaid
+flowchart LR
+    A[INSAT multispectral frames\n6 bands, 4 history frames] --> B[Deterministic core\nresidual + FiLM meta-learner + CBAM]
+    B --> C[Conditional DDPM refiner\nDDIM-25 sampling]
+    C --> D[T+1 / T+2 / T+3\npredicted PNG frames]
+    D --> E[performance.json\nPSNR / SSIM / MAE / RMSE]
+    D --> F[Backend API\nExpress + WebSocket]
+    F --> G[Frontend\nband timeline + animation]
+```
+
+---
+
+## Visual Results
+
+Representative future-frame predictions from [`Inference/output/sequence_0010`](Inference/output/sequence_0010) (TIR1 band, T+5/T+6/T+7 steps of the sequence):
+
+<div align="center">
+  <img src="Inference/output/sequence_0010/predicted_t5_IMG_TIR1.png" alt="Predicted T5 - TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t6_IMG_TIR1.png" alt="Predicted T6 - TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t7_IMG_TIR1.png" alt="Predicted T7 - TIR1" width="30%" />
+</div>
+
+Training dynamics and SOTA comparison (full figure set in [`Python-Backend/results/`](Python-Backend/results/)):
+
+<div align="center">
+  <img src="Python-Backend/results/fig_training_curves.png" alt="Training Curves" width="46%" />
+  <img src="Python-Backend/results/fig_sota_comparison.png" alt="SOTA Comparison" width="46%" />
+</div>
+
+---
+
 ## ML Architecture (Python-Backend)
 
-**K.A.L.A.M.** — a physics-informed conditional-diffusion forecaster for INSAT multi-spectral nowcasting: 6 bands (TIR1, TIR2, WV, VIS, MIR, SWIR), 4 observed 128×128 frames → 3 forecast frames (T+1…T+3), evaluated under a strict **leakage-free**, chronological train/val/test protocol.
+A physics-informed conditional-diffusion forecaster for INSAT multi-spectral nowcasting: 6 bands (TIR1, TIR2, WV, VIS, MIR, SWIR), 4 observed 128×128 frames → 3 forecast frames (T+1…T+3), evaluated under a strict **leakage-free**, chronological train/val/test protocol.
 
 ![Architecture](Python-Backend/results/fig_architecture.png)
 ![Pipeline](Python-Backend/results/fig_pipeline.png)
 
 ### Deterministic core — `PIConditionalForecaster` (`src/pidm_model.py`)
+
 - **Residual-from-persistence head**, zero-initialized so that at training step 0 the model output *is* the persistence baseline — the model only has to learn the *correction*, not the whole frame.
 - **Meta-learner (FiLM):** encodes the temporal difference between input frames into a "motion" embedding, which produces per-channel scale/shift (γ/β) parameters that modulate the U-Net bottleneck.
 - **CBAM** (channel + spatial attention) blocks throughout the encoder/decoder, with GroupNorm.
-- **Gated `RefineNet`:** a diffusion iterative refinement head applied after the main decode, sharpening high-frequency detail.
+- **Gated `RefineNet`:** a diffusion-style iterative refinement head applied after the main decode, sharpening high-frequency detail.
 - 43.2M parameters.
 
 ### Generative refiner — conditional DDPM (`src/pidm_diffusion.py`)
+
 - A **literal conditional diffusion model** (not an approximation): forward noising process `q(r_t | r_0)` on the *residual*, a time-embedded conditional U-Net denoiser, trained for T=1000 steps.
 - **DDIM sampling** (25 steps) at inference for speed; **ensemble sampling** (M=12) used to derive calibrated uncertainty estimates.
 - 3.7M parameters, adds perceptual/textural realism that the deterministic core (trained to minimize pixel error) smooths away.
 
 ### Physics-informed loss (`src/pidm_losses.py`, `CombinedLoss`)
+
 Differentiable SSIM/MS-SSIM, total variation, temporal smoothness, a dense Lucas-Kanade optical-flow estimator, advection-consistency, and a **mass-continuity PDE residual** (`∂ₜI + ∇·(Iu)`), combined as:
 
 | Term | Weight |
@@ -75,7 +121,9 @@ Differentiable SSIM/MS-SSIM, total variation, temporal smoothness, a dense Lucas
 | SSL flip-consistency | 0.3 |
 
 ### Training schedule
+
 Seeded (`--seed 42`), AdamW (weight-decay 1e-5, grad-clip 0.5), bf16 autocast, warmup-cosine LR:
+
 1. **Stage 1:** lr 2e-4, batch 12, ~87 epochs.
 2. **Stage 2:** + flip augmentation + EMA(0.999) + self-supervised (SSL) consistency, lr 8e-5, ~40 epochs.
 3. **Stage 3:** + corrected continuity-PDE fine-tuning, lr 8e-5, ~12 epochs.
@@ -189,6 +237,7 @@ Python-Backend/
 ```
 
 **`serving/`** (FastAPI deployment layer):
+
 - `main.py` — FastAPI app, `POST /run_inference`
 - `inference.py` — loads a checkpoint, writes predicted PNGs + metrics
 - `train4.py` — "kalam_m1" generation: `EnhancedUNet`, matches the shipped `best_model.pth`
@@ -206,7 +255,7 @@ The `serving/` track is younger and less validated than `src/` — it's the same
 
 `Python-Backend/experimental/` is kept for transparency — it's exploratory work **not wired into `src/` or `serving/`**, and not validated the way the rest of the repo has been. Nothing here backs the measured results above.
 
-- **`train6.py`** — a larger `UltraAdvancedUNet` with a **6-layer Transformer bottleneck** (`TemporalTransformer`), dense residual blocks, sinusoidal time-conditioning, and an interactive Tkinter training GUI, trained with a combined focal-L1 / Charbonnier / gradient / temporal ("PhyDiff-PINN") loss. This is the most architecturally ambitious idea in the repo (long-range spatio-temporal attention beyond the CNN receptive field) — but it has **never been benchmarked** against the `src/` evaluation protocol, so its real accuracy is unknown. Promoting it out of `experimental/` would require porting it to the leakage-free split and measuring it head-to-head against the Table above.
+- **`train6.py`** — a larger `UltraAdvancedUNet` with a **6-layer Transformer bottleneck** (`TemporalTransformer`), dense residual blocks, sinusoidal time-conditioning, and an interactive Tkinter training GUI, trained with a combined focal-L1 / Charbonnier / gradient / temporal ("PhyDiff-PINN") loss. This is the most architecturally ambitious idea in the repo (long-range spatio-temporal attention beyond the CNN receptive field) — but it has **never been benchmarked** against the `src/` evaluation protocol, so its real accuracy is unknown. Promoting it out of `experimental/` would require porting it to the leakage-free split and measuring it head-to-head against the table above.
 - **`stabdiff.py`** — adapts a pretrained Stable Diffusion v1.5 U-Net (via `diffusers`) to 6-band satellite frames with a custom conditioning adapter. Implements a full DDPM loop but was never run to a validated result.
 - **`fine_tune.py`** — a second Stable-Diffusion fine-tuning attempt. **Known bug:** it never actually noises the latents before denoising (`noisy_latents = noise` instead of `noise_scheduler.add_noise(...)`), so as written the network only learns to predict noise from noise. Left unpatched intentionally — treat as a starting point, not a working trainer.
 - **`s.py`** — a one-off HDF5 explorer for inspecting a raw INSAT L1C `.h5` file's dataset layout.
@@ -229,6 +278,7 @@ The `serving/` track is younger and less validated than `src/` — it's the same
 **Prerequisites:** Node.js 18+, Python 3.10+, MongoDB (local or Atlas), Cloudflare R2 bucket + credentials.
 
 **Backend**
+
 ```bash
 cd backend
 npm install
@@ -237,6 +287,7 @@ npm run dev        # Express on :3000, WebSocket on :3001
 ```
 
 **Frontend**
+
 ```bash
 cd frontend
 npm install
@@ -244,6 +295,7 @@ npm run dev        # Vite dev server on :5173
 ```
 
 **Python**
+
 ```bash
 cd Python-Backend
 pip install -r requirements.txt
@@ -252,6 +304,7 @@ pip install -r requirements.txt
 Open the app at `http://localhost:5173`.
 
 ### Environment Variables (`backend/.env`)
+
 - **Server:** `PORT=3000`, `NODE_ENV=development`
 - **Database:** `MONGO_URL=mongodb://localhost:27017/project-kalam` (or Atlas URI)
 - **Cloudflare R2:** `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
@@ -259,12 +312,14 @@ Open the app at `http://localhost:5173`.
 On startup, the backend verifies R2 configuration and logs a health summary.
 
 ### Local Paths To Update (very important)
-A few Windows paths are hard-coded for local dev during the hackathon — update these to match your environment and the new `Python-Backend/serving/` layout:
+
+A few Windows paths are hard-coded for local dev during the hackathon — update these to match your environment and the `Python-Backend/serving/` layout:
 
 - `backend/controllers/modelTest.controller.js:20` — `pythonScriptPath` currently points outside this repo (`d:\Hackathon\ISRO\pre_final\test1.py`). Point it at your local `Python-Backend/serving/test1.py` (or `test2.py`) instead.
 - `backend/app.js:28` and `backend/controllers/modelTest.controller.js:255,445` — `testOutputPath` currently points outside this repo. This should point at wherever you run `serving/inference.py`'s output — that folder is generated at runtime (gitignored), not shipped in the repo.
 
 ### Run Flow
+
 - Start backend (`:3000`) and WebSocket server (`:3001`), then the frontend (`:5173`).
 - **"Chase The Cloud"** — animate frames and request predictions for T+1…T+3.
 - **"Test Model"** — stream Python logs via WebSocket.
@@ -273,18 +328,22 @@ A few Windows paths are hard-coded for local dev during the hackathon — update
 ---
 
 ## API Overview (backend)
+
 Base URL: `http://localhost:3000`
 
 **Core**
+
 - `GET /` — Service info + advertised endpoints
 - `GET /api/prediction-images/<relative-path>` — Serves predicted images from `testOutputPath`
 
 **R2 Uploads (`/api/v1`)**
+
 - `POST /upload` — Upload a single file (`field: file`); validates type/size, stores to R2, persists metadata to MongoDB
 - `POST /test-upload` — Multer sanity check
 - `GET /health` — R2 configuration/health snapshot
 
 **Model Test & Predictions (`/api/v1`)**
+
 - `POST /folder-path` — Triggers the Python validation job; logs stream over WebSocket `ws://localhost:3001`
 - `POST /predict-frames` — Body: `{ timeWindow: number[4], selectedDirectory: string, bands: string[], windowSize: number }` → predicted frames metadata + performance aggregates
 - `GET /available-sequences` — Lists available `sequence_****` folders under `testOutputPath`
@@ -292,18 +351,21 @@ Base URL: `http://localhost:3000`
 ---
 
 ## Frontend Highlights
+
 - Multi-band timeline with keyboard navigation and single-cycle animation
 - Predicted vs. ground-truth frame browsing for T+1…T+3 with metrics display
 - Directory selection via the File System Access API
 - Toaster notifications, dark/light theme toggle
 
 **Key Entrypoints**
+
 - `frontend/src/App.jsx` — Routes: `/` (landing), `/test`, `/overlay-clouds`, `/satellite-animation`
 - `frontend/src/pages/SatelliteAnimationPage.jsx` — Main nowcasting UI
 - `frontend/src/components/ModelTestAndTerminalPreview.jsx` — WebSocket log streaming UI
 - `frontend/src/libs/axios.js` — Base API URL (`http://localhost:3000/api/v1`)
 
 **Backend Entrypoints**
+
 - `backend/app.js` — Express setup, static files, WebSocket server, routes
 - `backend/routes/r2upload.routes.js`, `backend/controllers/r2upload.controller.js` — Upload/health endpoints + R2/MongoDB persistence
 - `backend/routes/modelTest.routes.js`, `backend/controllers/modelTest.controller.js` — Python spawn, prediction assembly, performance parsing
@@ -314,6 +376,7 @@ Base URL: `http://localhost:3000`
 ---
 
 ## Troubleshooting
+
 - **Images not loading:** update `testOutputPath` in `backend/app.js` and the controller references.
 - **WebSocket not connecting:** ensure `ws://localhost:3001` is reachable and not firewalled.
 - **Uploads failing:** verify `.env` R2 variables and bucket permissions; check `GET /api/v1/health`.
@@ -322,7 +385,24 @@ Base URL: `http://localhost:3000`
 
 ---
 
+## Citation
+
+If you use or extend this work, please cite the repository and team:
+
+```bibtex
+@misc{kalam2025,
+  title        = {K.A.L.A.M.: Knowledge-guided Atmospheric Learning for Adaptive Motion Forecasting},
+  author       = {Team DOMinators},
+  year         = {2025},
+  howpublished = {\url{https://github.com/info-gallary/K.A.L.A.M.}},
+  note         = {National Runner-up, ISRO Bhartiya Antariksh Hackathon 2025}
+}
+```
+
+---
+
 ## Acknowledgements & License
+
 - ISRO Bhartiya Antariksh Hackathon 2025 — National Runner-up (2nd Place)
 - Gratitude to mentors, organizers, and the open-source community
 - **License:** MIT — see [`LICENSE`](LICENSE)

@@ -1,0 +1,132 @@
+{
+    "sequence_id": 10,
+    "frames": [
+        {
+            "frame": "T5_IMG_TIR1",
+            "file": "predicted_t5_IMG_TIR1.png",
+            "psnr": 24.786113714419457,
+            "ssim": 0.8732928145908118,
+            "mse_loss": 0.003322
+        },
+        {
+            "frame": "T5_IMG_TIR2",
+            "file": "predicted_t5_IMG_TIR2.png",
+            "psnr": 24.688533448861847,
+            "ssim": 0.866025220695858,
+            "mse_loss": 0.003397
+        },
+        {
+            "frame": "T5_IMG_WV",
+            "file": "predicted_t5_IMG_WV.png",
+            "psnr": 26.944640195251317,
+            "ssim": 0.8601728063922709,
+            "mse_loss": 0.002021
+        },
+        {
+            "frame": "T5_IMG_VIS",
+            "file": "predicted_t5_IMG_VIS.png",
+            "psnr": 21.763462222727554,
+            "ssim": 0.8130576692321843,
+            "mse_loss": 0.006663
+        },
+        {
+            "frame": "T5_IMG_MIR",
+            "file": "predicted_t5_IMG_MIR.png",
+            "psnr": 25.494000066000936,
+            "ssim": 0.8630683852684526,
+            "mse_loss": 0.002822
+        },
+        {
+            "frame": "T5_IMG_SWIR",
+            "file": "predicted_t5_IMG_SWIR.png",
+            "psnr": 23.463709345573953,
+            "ssim": 0.7614103108536862,
+            "mse_loss": 0.004504
+        },
+        {
+            "frame": "T6_IMG_TIR1",
+            "file": "predicted_t6_IMG_TIR1.png",
+            "psnr": 22.75100966688118,
+            "ssim": 0.7907530224935377,
+            "mse_loss": 0.005308
+        },
+        {
+            "frame": "T6_IMG_TIR2",
+            "file": "predicted_t6_IMG_TIR2.png",
+            "psnr": 22.801074580495136,
+            "ssim": 0.7881323530658323,
+            "mse_loss": 0.005247
+        },
+        {
+            "frame": "T6_IMG_WV",
+            "file": "predicted_t6_IMG_WV.png",
+            "psnr": 25.10369412654522,
+            "ssim": 0.799044449128625,
+            "mse_loss": 0.003088
+        },
+        {
+            "frame": "T6_IMG_VIS",
+            "file": "predicted_t6_IMG_VIS.png",
+            "psnr": 20.17393314524002,
+            "ssim": 0.7309814529731756,
+            "mse_loss": 0.009607
+        },
+        {
+            "frame": "T6_IMG_MIR",
+            "file": "predicted_t6_IMG_MIR.png",
+            "psnr": 24.513870579556702,
+            "ssim": 0.8083272432286199,
+            "mse_loss": 0.003537
+        },
+        {
+            "frame": "T6_IMG_SWIR",
+            "file": "predicted_t6_IMG_SWIR.png",
+            "psnr": 22.64886311819797,
+            "ssim": 0.6849505556158514,
+            "mse_loss": 0.005434
+        },
+        {
+            "frame": "T7_IMG_TIR1",
+            "file": "predicted_t7_IMG_TIR1.png",
+            "psnr": 21.136851785131,
+            "ssim": 0.7064757437981982,
+            "mse_loss": 0.007697
+        },
+        {
+            "frame": "T7_IMG_TIR2",
+            "file": "predicted_t7_IMG_TIR2.png",
+            "psnr": 21.16214487444425,
+            "ssim": 0.7003150989740258,
+            "mse_loss": 0.007652
+        },
+        {
+            "frame": "T7_IMG_WV",
+            "file": "predicted_t7_IMG_WV.png",
+            "psnr": 23.572744921733037,
+            "ssim": 0.7341084679997443,
+            "mse_loss": 0.004393
+        },
+        {
+            "frame": "T7_IMG_VIS",
+            "file": "predicted_t7_IMG_VIS.png",
+            "psnr": 19.056446580224762,
+            "ssim": 0.6475222850679964,
+            "mse_loss": 0.012427
+        },
+        {
+            "frame": "T7_IMG_MIR",
+            "file": "predicted_t7_IMG_MIR.png",
+            "psnr": 23.116136699211975,
+            "ssim": 0.7351389138742548,
+            "mse_loss": 0.00488
+        },
+        {
+            "frame": "T7_IMG_SWIR",
+            "file": "predicted_t7_IMG_SWIR.png",
+            "psnr": 22.22737285581963,
+            "ssim": 0.6355596548391065,
+            "mse_loss": 0.005988
+        }
+    ],
+    "avg_mse_loss": 0.005444
+}
