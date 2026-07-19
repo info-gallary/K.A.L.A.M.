@@ -1,0 +1,35 @@
+{
+  "n_test_subset": 70,
+  "rapsd_highfreq_fidelity_vs_GT": {
+    "det": 0.46550477131362383,
+    "diff_sample": 0.8425092046085418,
+    "persist": 0.9958764599202764
+  },
+  "pde_residual_mean": {
+    "persist": 0.00741232346211161,
+    "optflow_na": null,
+    "simvp": 0.02156205621681043,
+    "ours": 0.025847639023725475
+  },
+  "strata": {
+    "calm": {
+      "difficulty": 0.038689753506332636,
+      "ours_ssim": 0.7767894796501906,
+      "det_sharpness": 0.0420455695129931,
+      "diff_sharpness": 0.052768213829646506
+    },
+    "moderate": {
+      "difficulty": 0.047776387113591896,
+      "ours_ssim": 0.7597963364606065,
+      "det_sharpness": 0.04772210655652959,
+      "diff_sharpness": 0.05717572488862535
+    },
+    "convective": {
+      "difficulty": 0.07941340736072997,
+      "ours_ssim": 0.7740676405650192,
+      "det_sharpness": 0.05064393903898156,
+      "diff_sharpness": 0.05955335092933282
+    }
+  },
+  "note_single_day": "dataset spans one ~12h day (19700530 08:42-21:04); multi-day/season requires more data"
+}

@@ -1,0 +1,40 @@
+# model checkpoints / exported models (large; attach as Release / Git-LFS)
+*.pth
+*.onnx
+checkpoints/
+models/
+inference_models/
+
+# data + caches (regenerate via prep_cache.py / npy2png.py / stack.py)
+cache_128/
+of_prior/
+diffusion_dataset/
+diffusion_dataset_1/
+cloudchase_dataset/
+test_sorted_bands/
+sorted_bands/
+sorted_images/
+*.zip
+
+# inference / experiment outputs (regenerate by re-running the scripts)
+inference_outputs/
+outputs/
+agri_output/
+Predictions/
+plots/
+logs/
+output_masks/
+
+# nested/vendored environments — never commit a virtualenv
+venv/
+.venv/
+Diffusion/
+
+# logs / scratch
+*_log.txt
+train_log*.txt
+*.done
+
+# python
+__pycache__/
+*.pyc

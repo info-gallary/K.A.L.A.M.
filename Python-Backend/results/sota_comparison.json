@@ -1,0 +1,50 @@
+{
+  "rows": [
+    {
+      "method": "Persistence",
+      "ssim": 0.6295114602366273,
+      "psnr": 20.117654388342416,
+      "params": null,
+      "per_lead": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "method": "Optical-flow",
+      "ssim": 0.5868383454867361,
+      "psnr": 19.575913133716366,
+      "params": null,
+      "per_lead": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "method": "SimVP (our protocol)",
+      "ssim": 0.6481352609586799,
+      "psnr": null,
+      "params": 2534802,
+      "per_lead": [
+        0.7680814956408356,
+        0.6350682130655162,
+        0.5412560741696877
+      ]
+    },
+    {
+      "method": "PI-Forecaster (ours)",
+      "ssim": 0.728528430910901,
+      "psnr": 22.30791540885952,
+      "params": null,
+      "per_lead": [
+        0.8036041479408497,
+        0.7251199945841048,
+        0.6568611502077486
+      ]
+    }
+  ],
+  "winner_among_learned": "PI-Forecaster (ours)",
+  "ours_beats_learned_baselines": true
+}

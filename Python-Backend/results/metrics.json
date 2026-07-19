@@ -1,0 +1,90 @@
+{
+  "headline": {
+    "ssim": 0.728528430910901,
+    "psnr_db": 22.30791540885952,
+    "mae": 0.05922512583848502,
+    "rmse": 0.09280456643750008,
+    "lpips": 0.17880509297053018,
+    "temporal_consistency": 0.04851898189988874,
+    "test_time_augmentation": true,
+    "target_ssim": 0.8,
+    "target_psnr": 24.0,
+    "ssim_target_met": false,
+    "psnr_target_met": false
+  },
+  "baselines": {
+    "persistence": {
+      "ssim": 0.6295114602366273,
+      "psnr_db": 20.117654388342416
+    },
+    "optical_flow": {
+      "ssim": 0.5868383454867361,
+      "psnr_db": 19.575913133716366
+    }
+  },
+  "improvement": {
+    "vs_persistence_ssim": 0.09901697067427373,
+    "vs_persistence_psnr": 2.190261020517106,
+    "vs_optflow_ssim": 0.14169008542416495,
+    "vs_optflow_psnr": 2.732002275143156
+  },
+  "significance_wilcoxon_p": {
+    "model_vs_persistence": 3.2972260929141066e-36,
+    "model_vs_optflow": 3.2972260929141066e-36
+  },
+  "per_band": {
+    "TIR1": {
+      "ssim": 0.6312504154477747,
+      "psnr_db": 21.729234249299935,
+      "persistence_ssim": 0.4612923126064281,
+      "optflow_ssim": 0.44269501481138956
+    },
+    "TIR2": {
+      "ssim": 0.7510000206042347,
+      "psnr_db": 22.202088223986106,
+      "persistence_ssim": 0.6968159993411195,
+      "optflow_ssim": 0.6467452831004421
+    },
+    "WV": {
+      "ssim": 0.6897731688350882,
+      "psnr_db": 21.851760569669093,
+      "persistence_ssim": 0.5113265457064239,
+      "optflow_ssim": 0.5008940826317557
+    },
+    "VIS": {
+      "ssim": 0.7653371044215257,
+      "psnr_db": 22.52515717371382,
+      "persistence_ssim": 0.6837786843624644,
+      "optflow_ssim": 0.6251707104042354
+    },
+    "MIR": {
+      "ssim": 0.7637300040575141,
+      "psnr_db": 22.68403826064588,
+      "persistence_ssim": 0.6813945315140636,
+      "optflow_ssim": 0.6222117749724252
+    },
+    "SWIR": {
+      "ssim": 0.7700798720992689,
+      "psnr_db": 22.855213975842275,
+      "persistence_ssim": 0.7424606878892644,
+      "optflow_ssim": 0.6833132070001692
+    }
+  },
+  "per_lead_time": {
+    "T+1": {
+      "ssim": 0.8036041479408497,
+      "psnr_db": 23.9953208937204
+    },
+    "T+2": {
+      "ssim": 0.7251199945841048,
+      "psnr_db": 22.055568965595626
+    },
+    "T+3": {
+      "ssim": 0.6568611502077486,
+      "psnr_db": 20.872856367262532
+    }
+  },
+  "test_sequences": 210,
+  "metric_backend": "scikit-image",
+  "split": "chronological held-out (leakage-free, gap-buffered)"
+}

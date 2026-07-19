@@ -1,0 +1,35 @@
+{
+  "device": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+  "input": "1x4x6x128x128",
+  "output": "1x3x6x128x128",
+  "params_M": {
+    "deterministic_core": 43.21,
+    "diffusion_refiner": 3.73,
+    "total": 46.95
+  },
+  "deployable_weights_MB": {
+    "deterministic_fp32": 172.9,
+    "deterministic_fp16": 86.4,
+    "diffusion_fp32": 14.9
+  },
+  "checkpoint_disk_MB": {
+    "deterministic_core_full_ckpt": 518.8
+  },
+  "latency_ms": {
+    "deterministic": 684.21,
+    "deterministic_TTA4x": 2730.22,
+    "diffusion_DDIM25_1sample": 3858.8,
+    "det+diffusion_DDIM25": 4543.1
+  },
+  "latency_std_ms": {
+    "deterministic": 27.18
+  },
+  "throughput_fps": {
+    "deterministic": 1.5,
+    "deterministic_TTA4x": 0.4
+  },
+  "peak_mem_MB": {
+    "deterministic": 1866.8,
+    "diffusion_DDIM25": 796.4
+  }
+}

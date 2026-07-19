@@ -8,7 +8,7 @@ import  { spawn } from 'child_process';
 import {WebSocketServer }  from 'ws'
 
 import {connectDB} from './utils/db.js'
-import r2Routes from './routes/r2upload.routes.js'
+// import r2Routes from './routes/r2upload.routes.js'
 import testRoutes from './routes/modelTest.routes.js'
 
 import { setClient } from './utils/websocket.js';
@@ -20,7 +20,7 @@ const app = express();
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'http://localhost:5174',
   credentials: true,
 }));
 
@@ -66,7 +66,7 @@ app.get('/', (req, res) => {
   });
 });
 
-app.use('/api/v1', r2Routes);
+// app.use('/api/v1', r2Routes);
 app.use('/api/v1', testRoutes);
 
 // Global error handling
@@ -100,7 +100,6 @@ app.use((error, req, res, next) => {
     });
   }
   
-  // Default error
   res.status(500).json({
     success: false,
     message: 'Internal server error',

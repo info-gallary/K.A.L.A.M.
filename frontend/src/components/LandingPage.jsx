@@ -18,7 +18,7 @@ const LandingPage = () => {
     bgOverlay: darkMode 
       ? 'bg-gradient-to-br from-stone-900/50 via-transparent to-stone-800/30'
       : 'bg-gradient-to-br from-neutral-50/80 via-white/40 to-stone-50/60',
-    nav: darkMode ? 'bg-stone-900/80 border-stone-700/30' : 'bg-white/80 border-stone-200',
+    nav: darkMode ? 'bg-sky-blue-900/80 border-stone-700/30' : 'bg-white/80 border-stone-200',
     text: darkMode ? 'text-stone-100' : 'text-stone-900',
     textSecondary: darkMode ? 'text-stone-300' : 'text-stone-700',
     textMuted: darkMode ? 'text-stone-400' : 'text-stone-600',
@@ -36,8 +36,8 @@ const LandingPage = () => {
       ? 'border-stone-600 text-stone-300 hover:bg-stone-800/70 hover:border-stone-500'
       : 'border-stone-300 text-stone-700 hover:bg-stone-50 hover:border-stone-400',
     // Claude brand colors
-    accent: '#C15F3C', // Crail - Claude's primary brand color
-    accentSecondary: '#da7756' // Terra cotta from logo
+    accent: '#1c96c5', // Crail - Claude's primary brand color
+    accentSecondary: '#1c96c5' // Terra cotta from logo
   };
 
   return (
@@ -62,32 +62,7 @@ const LandingPage = () => {
 
               {/* Navigation Buttons */}
               <div className="flex items-center space-x-3">
-                <Link
-                  to='/overlay-clouds'
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${themeClasses.navButton}`}
-                >
-                  <Map className="size-6" />
-                  <span className='text-lg'>Visualize On Map</span>
-                </Link>
-
-                <Link
-                  to="/test"
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${themeClasses.navButton}`}
-                >
-                  <BarChart3 className="size-6" />
-                  <span className='text-lg'>Test Model</span>
-                </Link>
-
-                <Link
-                  to="/satellite-animation"
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${themeClasses.navButton}`}
-                >
-                  {/* <Play className="size-6" />
-                   */}
-                   <Cloud className="size-6" />
-                  <span className='text-lg'>Chase The Cloud</span>
-                </Link>
-
+              
                 <button
                   onClick={toggleTheme}
                   className={`p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] ${themeClasses.themeButton}`}
@@ -120,7 +95,7 @@ const LandingPage = () => {
                     <span>PROJECT</span>
                     <div className="inline-block w-32 md:w-40 lg:w-48">
                       <RotatingText
-                        texts={['KALAM', 'कलाम', 'કલામ','கலாம்']}
+                        texts={['SAGAR', 'सागरः', 'સાગર','സാഗർ']}
                         mainClassName="px-2 sm:px-2 md:px-3 text-white overflow-hidden py-0.5 sm:py-1 md:py-2 justify-center rounded-lg text-3xl md:text-4xl lg:text-5xl inline-flex w-full"
                         staggerFrom={"last"}
                         initial={{ y: "100%" }}
@@ -136,15 +111,14 @@ const LandingPage = () => {
                   </h1>
 
                   <p className={`text-lg md:text-xl leading-relaxed mx-auto max-w-2xl ${themeClasses.textSecondary}`}>
-                   "Dream is not that which you see while sleeping, it is something that does not let you sleep."
-                   - Dr. APJ Abdul Kalam
+                   SAGAR - Smart Agentic Gateway for Aquatic Data, Marine Analytics and Research
                   </p>
                 </div>
 
                 {/* CTA Section */}
                 <div className="space-y-6">
                   <p className={`text-base ${themeClasses.textMuted}`}>
-                    Experience the future of atmospheric prediction
+                    Experience the future of AI-Driven Unified Marine Data Platform
                   </p>
 
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">

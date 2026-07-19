@@ -1,0 +1,24 @@
+# --- research track (src/) ---
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+numpy
+opencv-python
+scikit-image
+scipy
+matplotlib
+seaborn
+tqdm
+lpips
+
+# --- serving track (serving/main.py, inference/ONNX export) ---
+fastapi
+uvicorn
+pydantic
+onnx
+onnxruntime
+h5py
+Pillow
+
+# --- experimental track (experimental/stabdiff.py, fine_tune.py) ---
+diffusers
+transformers

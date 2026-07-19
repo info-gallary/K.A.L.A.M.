@@ -1,0 +1,10 @@
+{
+  "crps_diffusion": 0.04622679877848852,
+  "crps_deterministic_MAE": 0.0577049097489743,
+  "spread_skill_corr": 0.6119193956458916,
+  "reliability_corr": 0.944521124585958,
+  "mean_spread": 0.056049014042530744,
+  "mean_skill_rmse": 0.0865140657517172,
+  "n_test": 42,
+  "ensemble_M": 12
+}
