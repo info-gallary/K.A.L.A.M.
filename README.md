@@ -62,6 +62,50 @@ flowchart LR
 
 ---
 
+### Multi-Spectral Representation
+
+K.A.L.A.M. uses six INSAT spectral bands — **TIR1, TIR2, WV, VIS, MIR, and SWIR**. 
+Each band observes the atmosphere and Earth's surface at a different wavelength,
+providing complementary information about cloud structure, temperature,
+moisture, and surface features.
+
+- **TIR1 (Thermal Infrared 1):** Captures thermal radiation emitted by the
+  Earth and atmosphere. It provides useful information about cloud-top
+  temperature and helps track the structure and evolution of cloud systems.
+
+- **TIR2 (Thermal Infrared 2):** Provides a second thermal perspective of the
+  same scene. Along with TIR1, it helps the model distinguish differences in
+  cloud and atmospheric thermal characteristics.
+
+- **WV (Water Vapour):** Sensitive to water vapour in the atmosphere. This
+  provides information about moisture distribution and helps give context to
+  the development and movement of atmospheric systems.
+
+- **VIS (Visible):** Records reflected sunlight and therefore provides clear
+  information about visible cloud shapes, boundaries, and spatial structure.
+  Its usefulness is naturally dependent on available sunlight.
+
+- **MIR (Mid-Infrared):** Provides additional spectral information between the
+  visible and thermal regions. It contributes complementary information for
+  distinguishing cloud and surface characteristics.
+
+- **SWIR (Short-Wave Infrared):** Adds another spectral perspective that can
+  help separate atmospheric and surface features that may appear similar in
+  visible or thermal imagery.
+
+During preprocessing, the six bands are retained as separate channels and
+combined into a **6-channel representation** for each observation. K.A.L.A.M.
+then uses four consecutive multi-spectral observations to predict the next
+three frames.
+
+This allows the model to learn from both **spectral information** (how a
+feature appears across different wavelengths) and **temporal information**
+(how that feature changes across consecutive observations), rather than
+relying on a single visual representation of the atmosphere. Such near-term nowcasting can support
+real-world disaster management by helping teams monitor developing weather
+systems earlier and make more informed decisions during preparedness and
+emergency response.
+
 ## Visual Results
 
 Representative future-frame predictions from [`Inference/output/sequence_0010`](Inference/output/sequence_0010) (TIR1 band, T+5/T+6/T+7 steps of the sequence):
