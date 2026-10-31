@@ -1,15 +1,33 @@
 <div align="center">
   <img src="frontend/public/sir_kalam.png" alt="Project K.A.L.A.M." width="160" />
   <h1>K.A.L.A.M.</h1>
-  <h3>Knowledge-guided Atmospheric Learning for Adaptive Motion Forecasting</h3>
+  <h3>Knowledge-Augmented Learning for Atmospheric Metamodels</h3>
   <p><strong>Team DOMinators</strong> — National Runner-up (2nd Place), ISRO Bhartiya Antariksh Hackathon 2025</p>
 </div>
 
 ---
 
-K.A.L.A.M. is a near-term (T+1…T+3) atmospheric nowcasting system for INSAT multi-spectral satellite imagery, paired with a full web application for map-based exploration, animation, and model report views. It combines a Python research/serving ML pipeline, a Node.js/Express API with WebSocket live logs, Cloudflare R2 storage, MongoDB persistence, and a React + Vite + Tailwind UI.
+## Research Overview
 
-This README is the single source of truth for the project — architecture, measured results, reproduction steps, and known limitations.
+**K.A.L.A.M.: Efficient Probabilistic Cloud Nowcasting from INSAT-3DR on a Single Consumer GPU**
+
+K.A.L.A.M. is a two-stage probabilistic cloud-nowcasting framework designed for six-band INSAT-3D/3DR satellite imagery. It predicts three nominal future frames from four observed frames by combining a physics-regularized deterministic forecaster with a conditional residual diffusion model.
+
+The deterministic stage learns corrections to the most recent observed frame through a residual-from-persistence architecture incorporating CBAM attention, FiLM-based motion conditioning, and gated refinement. A differentiable continuity-inspired transport regularizer encourages consistency in predicted image evolution.
+
+The generative stage models the deterministic forecast's residual using conditional diffusion. Multiple samples provide alternative possible future states and pixelwise uncertainty estimates.
+
+On an index-ordered, gap-buffered evaluation of 210 held-out sequences, the deterministic model achieves **SSIM 0.728 and PSNR 22.31 dB**, outperforming persistence, optical flow, and a retrained SimVP baseline.
+
+The diffusion stage recovers **84.3% of target high-frequency spectral power**, compared with 46.6% for the deterministic forecast, and improves the ensemble CRPS relative to a deterministic reference.
+
+The model operates on a single **NVIDIA RTX 3050 laptop GPU with 6 GB VRAM**, demonstrating that probabilistic satellite-image forecasting can be implemented without cluster-scale computing infrastructure.
+
+**Important evaluation distinctions:** Forecast horizons are reported as nominal frame indices because verified acquisition timestamps are unavailable in the derived dataset. The diffusion ensemble provides informative uncertainty rankings but is underdispersed and is not claimed to be absolutely calibrated.
+
+The repository also includes a full-stack application for map-based visualization, satellite-frame animation, inference, and performance reporting.
+
+---
 
 ## Table of Contents
 
@@ -17,7 +35,7 @@ This README is the single source of truth for the project — architecture, meas
 2. [Tech Stack](#tech-stack)
 3. [Pipeline At A Glance](#pipeline-at-a-glance)
 4. [Visual Results](#visual-results)
-5. [ML Architecture (Python-Backend)](#ml-architecture-python-backend)
+5. [ML Architecture](#ml-architecture-python-backend)
 6. [Measured Results](#measured-results)
 7. [Reproducibility](#reproducibility)
 8. [Python-Backend Structure](#python-backend-structure)
@@ -34,17 +52,19 @@ This README is the single source of truth for the project — architecture, meas
 
 ## Monorepo Layout
 
-- `frontend/` — React/Vite app (UI, animations, map visualization, reports)
-- `backend/` — Express API + WebSocket server + R2 uploads + MongoDB
-- `Python-Backend/` — ML research, training, and serving pipeline (see below)
-- `Inference/` — a small, curated example sequence (input tensor + predicted PNGs + metrics) for a quick look without running the pipeline
+* `frontend/` — React/Vite application for visualization, animations, maps, and reports.
+* `backend/` — Express API, WebSocket server, Cloudflare R2 integration, and MongoDB persistence.
+* `Python-Backend/` — Machine-learning research, training, evaluation, diffusion, and serving pipelines.
+* `Inference/` — Example satellite-input sequences, predicted images, and evaluation metrics.
 
 ## Tech Stack
 
-- **Frontend:** React 19, Vite, Tailwind CSS, react-router, lucide-react
-- **Backend:** Node.js, Express, WebSocket (`ws`), Multer, MongoDB (Mongoose)
-- **Storage:** Cloudflare R2 via AWS SDK v3
-- **ML:** PyTorch 2.6 (CUDA 12.4), a conditional-diffusion U-Net, ONNX export, FastAPI serving
+* **Frontend:** React 19, Vite, Tailwind CSS, React Router, Lucide React.
+* **Backend:** Node.js, Express.js, WebSocket, Multer, MongoDB, Mongoose.
+* **Storage:** Cloudflare R2 using AWS SDK v3.
+* **Machine Learning:** Python, PyTorch 2.6, CUDA 12.4, OpenCV, NumPy, scikit-image.
+* **Model Serving:** FastAPI and ONNX.
+* **Architecture:** Residual encoder–decoder, CBAM, FiLM, conditional DDPM, DDIM sampling.
 
 ---
 
@@ -52,401 +72,852 @@ This README is the single source of truth for the project — architecture, meas
 
 ```mermaid
 flowchart LR
-    A[INSAT multispectral frames\n6 bands, 4 history frames] --> B[Deterministic core\nresidual + FiLM meta-learner + CBAM]
-    B --> C[Conditional DDPM refiner\nDDIM-25 sampling]
-    C --> D[T+1 / T+2 / T+3\npredicted PNG frames]
-    D --> E[performance.json\nPSNR / SSIM / MAE / RMSE]
-    D --> F[Backend API\nExpress + WebSocket]
-    F --> G[Frontend\nband timeline + animation]
+    A["INSAT-3D/3DR<br/>Six spectral bands"] --> B["Preprocessing<br/>Normalization and resizing"]
+    B --> C["Four observed frames<br/>T-3 to T"]
+    C --> D["Deterministic forecaster<br/>Residual + CBAM + FiLM"]
+    D --> E["Deterministic forecast<br/>T+1 to T+3"]
+    E --> F["Conditional residual diffusion<br/>DDIM sampling"]
+    F --> G["Probabilistic samples<br/>and uncertainty maps"]
+    E --> H["Evaluation and visualization"]
+    G --> H
+    H --> I["FastAPI / Express"]
+    I --> J["React dashboard"]
 ```
-
----
 
 ### Multi-Spectral Representation
 
-K.A.L.A.M. uses six INSAT spectral bands — **TIR1, TIR2, WV, VIS, MIR, and SWIR**. 
-Each band observes the atmosphere and Earth's surface at a different wavelength,
-providing complementary information about cloud structure, temperature,
-moisture, and surface features.
+K.A.L.A.M. processes six INSAT spectral bands:
 
-- **TIR1 (Thermal Infrared 1):** Captures thermal radiation emitted by the
-  Earth and atmosphere. It provides useful information about cloud-top
-  temperature and helps track the structure and evolution of cloud systems.
+| Band | Description         | Atmospheric Information                      |
+| ---- | ------------------- | -------------------------------------------- |
+| TIR1 | Thermal Infrared 1  | Cloud-top temperature and thermal structure  |
+| TIR2 | Thermal Infrared 2  | Complementary thermal information            |
+| WV   | Water Vapour        | Atmospheric moisture distribution            |
+| VIS  | Visible             | Cloud morphology and boundaries              |
+| MIR  | Mid-Infrared        | Additional cloud and surface characteristics |
+| SWIR | Short-Wave Infrared | Complementary spectral information           |
 
-- **TIR2 (Thermal Infrared 2):** Provides a second thermal perspective of the
-  same scene. Along with TIR1, it helps the model distinguish differences in
-  cloud and atmospheric thermal characteristics.
+Each observation is represented as a six-channel tensor.
 
-- **WV (Water Vapour):** Sensitive to water vapour in the atmosphere. This
-  provides information about moisture distribution and helps give context to
-  the development and movement of atmospheric systems.
+The forecasting task is:
 
-- **VIS (Visible):** Records reflected sunlight and therefore provides clear
-  information about visible cloud shapes, boundaries, and spatial structure.
-  Its usefulness is naturally dependent on available sunlight.
+**Input:** Four consecutive six-band observations.
 
-- **MIR (Mid-Infrared):** Provides additional spectral information between the
-  visible and thermal regions. It contributes complementary information for
-  distinguishing cloud and surface characteristics.
+**Output:** Three predicted six-band observations.
 
-- **SWIR (Short-Wave Infrared):** Adds another spectral perspective that can
-  help separate atmospheric and surface features that may appear similar in
-  visible or thermal imagery.
+The model therefore processes:
 
-During preprocessing, the six bands are retained as separate channels and
-combined into a **6-channel representation** for each observation. K.A.L.A.M.
-then uses four consecutive multi-spectral observations to predict the next
-three frames.
+`[4, 6, 128, 128] → [3, 6, 128, 128]`
 
-This allows the model to learn from both **spectral information** (how a
-feature appears across different wavelengths) and **temporal information**
-(how that feature changes across consecutive observations), rather than
-relying on a single visual representation of the atmosphere. Such near-term nowcasting can support
-real-world disaster management by helping teams monitor developing weather
-systems earlier and make more informed decisions during preparedness and
-emergency response.
+The output indices T+1, T+2, and T+3 indicate future positions in the derived sequence. They should not be interpreted as verified 15-, 30-, and 45-minute horizons.
+
+---
 
 ## Visual Results
 
-Representative future-frame predictions from [`Inference/output/sequence_0010`](Inference/output/sequence_0010) (TIR1 band, T+5/T+6/T+7 steps of the sequence):
+Representative future-frame predictions are available in [`Inference/output/sequence_0010`](Inference/output/sequence_0010).
 
 <div align="center">
-  <img src="Inference/output/sequence_0010/predicted_t5_IMG_TIR1.png" alt="Predicted T5 - TIR1" width="30%" />
-  <img src="Inference/output/sequence_0010/predicted_t6_IMG_TIR1.png" alt="Predicted T6 - TIR1" width="30%" />
-  <img src="Inference/output/sequence_0010/predicted_t7_IMG_TIR1.png" alt="Predicted T7 - TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t5_IMG_TIR1.png" alt="Predicted future frame 1 — TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t6_IMG_TIR1.png" alt="Predicted future frame 2 — TIR1" width="30%" />
+  <img src="Inference/output/sequence_0010/predicted_t7_IMG_TIR1.png" alt="Predicted future frame 3 — TIR1" width="30%" />
 </div>
 
-Training dynamics and SOTA comparison (full figure set in [`Python-Backend/results/`](Python-Backend/results/)):
+Training and model-comparison figures:
 
 <div align="center">
   <img src="Python-Backend/results/fig_training_curves.png" alt="Training Curves" width="46%" />
-  <img src="Python-Backend/results/fig_sota_comparison.png" alt="SOTA Comparison" width="46%" />
+  <img src="Python-Backend/results/fig_sota_comparison.png" alt="Model Comparison" width="46%" />
 </div>
+
+Additional results, including uncertainty analysis, model ablations, spectral fidelity, and qualitative forecasts, are available in [`Python-Backend/results/`](Python-Backend/results/).
 
 ---
 
 ## ML Architecture (Python-Backend)
 
-A physics-informed conditional-diffusion forecaster for INSAT multi-spectral nowcasting: 6 bands (TIR1, TIR2, WV, VIS, MIR, SWIR), 4 observed 128×128 frames → 3 forecast frames (T+1…T+3), evaluated under a strict **leakage-free**, chronological train/val/test protocol.
+K.A.L.A.M. combines a deterministic forecasting model with conditional residual diffusion.
 
-![Architecture](Python-Backend/results/fig_architecture.png)
-![Pipeline](Python-Backend/results/fig_pipeline.png)
+### Stage 1 — Deterministic Forecaster
 
-### Deterministic core — `PIConditionalForecaster` (`src/pidm_model.py`)
+**Implementation:** `src/pidm_model.py`
 
-- **Residual-from-persistence head**, zero-initialized so that at training step 0 the model output *is* the persistence baseline — the model only has to learn the *correction*, not the whole frame.
-- **Meta-learner (FiLM):** encodes the temporal difference between input frames into a "motion" embedding, which produces per-channel scale/shift (γ/β) parameters that modulate the U-Net bottleneck.
-- **CBAM** (channel + spatial attention) blocks throughout the encoder/decoder, with GroupNorm.
-- **Gated `RefineNet`:** a diffusion-style iterative refinement head applied after the main decode, sharpening high-frequency detail.
-- 43.2M parameters.
+**Model:** `PIConditionalForecaster`
 
-### Generative refiner — conditional DDPM (`src/pidm_diffusion.py`)
+The deterministic architecture contains:
 
-- A **literal conditional diffusion model** (not an approximation): forward noising process `q(r_t | r_0)` on the *residual*, a time-embedded conditional U-Net denoiser, trained for T=1000 steps.
-- **DDIM sampling** (25 steps) at inference for speed; **ensemble sampling** (M=12) used to derive calibrated uncertainty estimates.
-- 3.7M parameters, adds perceptual/textural realism that the deterministic core (trained to minimize pixel error) smooths away.
+* A multi-scale input-processing stem.
+* A four-level residual encoder.
+* GroupNorm and GELU activation functions.
+* CBAM channel and spatial attention.
+* A 512-channel bottleneck.
+* A skip-connected decoder.
+* A motion-conditioned FiLM meta-learner.
+* A residual-from-persistence prediction head.
+* A gated iterative refinement module.
 
-### Physics-informed loss (`src/pidm_losses.py`, `CombinedLoss`)
+Rather than directly predicting future satellite frames, the model estimates corrections to the last observed frame.
 
-Differentiable SSIM/MS-SSIM, total variation, temporal smoothness, a dense Lucas-Kanade optical-flow estimator, advection-consistency, and a **mass-continuity PDE residual** (`∂ₜI + ∇·(Iu)`), combined as:
+The prediction is formulated as:
 
-| Term | Weight |
-|---|---|
-| L1 | 1.0 |
-| MSE | 0.6 |
-| 1 − SSIM (per-frame, lead-weighted) | 1.0 |
-| 1 − MS-SSIM (fine-tune stage) | 2.0 |
-| Multi-scale gradient | 0.15 |
-| Temporal consistency | 0.15 |
-| Total variation | 0.02 |
-| Advection consistency | 0.10 |
-| Continuity-PDE (physics) | 0.03 |
-| Lead-time weights (T+1 / T+2 / T+3) | 0.6 / 1.0 / 1.4 |
-| SSL flip-consistency | 0.3 |
+$$
+\hat{y}_{t+k}=x_t+g_k\Delta_\theta(X)
+$$
 
-### Training schedule
+where:
 
-Seeded (`--seed 42`), AdamW (weight-decay 1e-5, grad-clip 0.5), bf16 autocast, warmup-cosine LR:
+* \(x_t\) is the last observed satellite frame.
+* \(\Delta_\theta(X)\) is the learned residual correction.
+* \(g_k\) is a learnable horizon-specific gain.
+* \(k \in \{1,2,3\}\) represents the nominal forecast index.
 
-1. **Stage 1:** lr 2e-4, batch 12, ~87 epochs.
-2. **Stage 2:** + flip augmentation + EMA(0.999) + self-supervised (SSL) consistency, lr 8e-5, ~40 epochs.
-3. **Stage 3:** + corrected continuity-PDE fine-tuning, lr 8e-5, ~12 epochs.
-4. **Inference:** 4× flip test-time augmentation (TTA).
+The gain is initialized to zero, allowing training to begin from the persistence baseline.
+
+**Deterministic model size:** Approximately 43.2 million parameters.
+
+### Stage 2 — Conditional Residual Diffusion
+
+**Implementation:** `src/pidm_diffusion.py`
+
+The second stage models the residual between the deterministic prediction and ground truth.
+
+$$
+r_0=Y-\hat{Y}
+$$
+
+A conditional denoising diffusion probabilistic model learns the residual distribution conditioned on the observed frames and deterministic predictions.
+
+The diffusion architecture includes:
+
+* A conditional U-Net denoiser.
+* Diffusion timestep embeddings.
+* Residual-noise prediction.
+* DDPM training.
+* DDIM sampling for accelerated inference.
+* Ensemble-based pixelwise uncertainty estimation.
+
+The model uses 1,000 training diffusion steps.
+
+For spectral-fidelity evaluation, inference uses 25 DDIM steps.
+
+The separate uncertainty experiment uses 20 DDIM steps and an ensemble of 12 samples.
+
+Given an ensemble of predictions, pixelwise uncertainty is estimated through the standard deviation across ensemble members.
+
+The resulting uncertainty is useful for ranking relatively difficult predictions. However, the measured ensemble is underdispersed, so its raw standard deviation is not presented as an absolutely calibrated prediction interval.
+
+**Diffusion model size:** Approximately 3.7 million parameters.
+
+**Combined system:** Approximately 47.0 million parameters.
+
+### Physics-Informed Regularization
+
+**Implementation:** `src/pidm_losses.py`
+
+The deterministic model incorporates a differentiable continuity-inspired transport regularizer.
+
+The residual is based on:
+
+$$
+\frac{\partial I}{\partial t}+\nabla\cdot(I\mathbf{u})
+$$
+
+where:
+
+* \(I\) represents satellite-image intensity.
+* \(\mathbf{u}\) is an estimated two-dimensional velocity field.
+* The velocity field is obtained using a differentiable Lucas–Kanade estimator.
+
+The regularizer encourages consistency between predicted intensity evolution and estimated image transport.
+
+**This is a soft image-transport constraint, not a demonstration of atmospheric mass conservation.**
+
+The complete training objective combines several terms.
+
+| Loss Component                  | Weight |
+| ------------------------------- | -----: |
+| L1                              |    1.0 |
+| MSE                             |    0.6 |
+| SSIM                            |    1.0 |
+| MS-SSIM, fine-tuning            |    2.0 |
+| Multi-scale gradient            |   0.15 |
+| Temporal consistency            |   0.15 |
+| Total variation                 |   0.02 |
+| Advection consistency           |   0.10 |
+| Continuity-inspired regularizer |   0.03 |
+| SSL flip consistency            |   0.30 |
+
+The horizon-specific training weights are:
+
+`T+1: 0.6 | T+2: 1.0 | T+3: 1.4`
+
+### Training Configuration
+
+Training uses AdamW optimization, gradient clipping, mixed precision, and learning-rate scheduling.
+
+The research pipeline incorporates:
+
+1. Initial deterministic model training.
+2. Augmentation and exponential-moving-average refinement.
+3. Additional continuity-regularized fine-tuning.
+4. Conditional residual diffusion training.
+5. Test-time augmentation for deterministic inference.
+
+The training scripts and their configurable parameters are available in [`Python-Backend/src/`](Python-Backend/src/).
 
 ---
 
 ## Measured Results
 
-Held-out test set (210 chronological windows), identical protocol and estimator for every method, 4× TTA on all learned methods.
+### Evaluation Protocol
 
-| Method | PSNR (dB) ↑ | SSIM ↑ | MAE ↓ | RMSE ↓ | LPIPS ↓ |
-|---|---|---|---|---|---|
-| Persistence | 20.12 | 0.630 | 0.081 | 0.130 | 0.077 |
-| Optical flow (Farnebäck) | 19.58 | 0.587 | 0.085 | 0.135 | 0.112 |
-| SimVP (retrained, fair protocol) | 21.00 | 0.648 | 0.072 | 0.126 | 0.073 |
-| **K.A.L.A.M. (ours)** | **22.31** | **0.728** | **0.059** | **0.093** | 0.179 |
+The primary deterministic evaluation uses **210 held-out sequences**.
 
-- **+0.080 SSIM over a fairly-retrained SimVP**; Wilcoxon signed-rank vs. persistence p ≈ 3.3×10⁻³⁶ (n=210).
-- LPIPS is highest for K.A.L.A.M. by design — the deterministic mean is smooth; the diffusion refiner restores perceptual realism (see RAPSD below), which is a framing strength, not hidden.
+The dataset is partitioned into ordered training, validation, and testing subsets using a seven-window buffer between partitions.
 
-**Per lead-time:**
+This prevents overlapping windows from sharing frames across the train, validation, and test partitions.
 
-| Horizon | SSIM ↑ | PSNR (dB) ↑ |
-|---|---|---|
-| +15 min | 0.804 | 24.00 |
-| +30 min | 0.725 | 22.06 |
-| +45 min | 0.657 | 20.87 |
+The evaluation subsets contain:
 
-**Ablation (matched 45-epoch budget, `results/ablation_full.json`):**
+| Partition  | Sequences |
+| ---------- | --------: |
+| Training   |     1,042 |
+| Validation |       223 |
+| Testing    |       210 |
 
-| Variant | SSIM ↑ | ΔSSIM | Reading |
-|---|---|---|---|
-| Full (residual + meta + refine) | 0.707 | — | baseline |
-| − residual-from-persistence | 0.220 | **−0.487** | dominant driver — collapses without it |
-| − meta-learner | 0.630 | **−0.077** | falls back to persistence-level |
-| − refine module* | 0.694 | −0.013 | minor regulariser |
-| − physics loss* | 0.697 | −0.010 | minor regulariser |
+The split follows the stored sequence indices. Source-level acquisition timestamps are unavailable in the derived cache.
 
-\*trained at reduced (28-epoch) budget — deltas conflate removal with less training.
+Because neighboring test windows overlap, individual test-window scores are not statistically independent.
 
-**Generative fidelity & uncertainty (diffusion subset, M=12 ensemble):**
+### Deterministic Forecasting Performance
 
-| Quantity | Value |
-|---|---|
-| RAPSD high-frequency fidelity (diffusion vs. deterministic) | 84.3% vs. 46.6% |
-| CRPS reduction (ensemble vs. deterministic) | −19.9% |
-| Reliability correlation | 0.945 (rank-reliable) |
-| Spread–skill correlation | 0.612 |
-| Calibration verdict | **rank-reliable but under-dispersed** — not "calibrated" |
+The following results are calculated over the 210 held-out sequences.
 
-**Efficiency (measured, RTX 3050 6GB Laptop, batch=1):**
+| Method         |    PSNR ↑ |    SSIM ↑ |     MAE ↓ |    RMSE ↓ | LPIPS ↓ |
+| -------------- | --------: | --------: | --------: | --------: | ------: |
+| Persistence    |     20.12 |     0.630 |     0.081 |     0.130 |   0.077 |
+| Optical Flow   |     19.58 |     0.587 |     0.085 |     0.135 |   0.112 |
+| SimVP          |     21.00 |     0.648 |     0.072 |     0.126 |   0.073 |
+| **K.A.L.A.M.** | **22.31** | **0.728** | **0.059** | **0.093** |   0.179 |
 
-| Quantity | Value |
-|---|---|
-| Parameters | 47.0M (43.2M deterministic + 3.7M diffusion) |
-| Deployable weights | 173MB fp32 / 86MB fp16 |
-| Latency (deterministic) | 0.68s |
-| Latency (+4× TTA) | 2.73s |
-| Latency (+diffusion, DDIM-25) | 4.54s |
-| Peak GPU memory | 1.87GB (det.), 0.80GB (diffusion) |
+K.A.L.A.M. achieves:
 
-All figures backing these tables live in [`Python-Backend/results/`](Python-Backend/results/) (40+ PNGs + JSON metrics — ablation, calibration, SOTA comparison, XAI attention/saliency, RGB composites, per-band/per-lead-time breakdowns).
+* **+0.099 absolute SSIM** over persistence.
+* **+0.142 absolute SSIM** over optical flow.
+* **+0.080 absolute SSIM** over retrained SimVP.
+* Approximately **27% reduction in MAE** relative to persistence.
+* Approximately **28% reduction in RMSE** relative to persistence.
+
+The per-window Wilcoxon signed-rank test reports:
+
+`p ≈ 3.3 × 10⁻³⁶`
+
+Because the held-out windows overlap, this p-value is descriptive and should not be interpreted as evidence from 210 statistically independent observations.
+
+The deterministic model has a higher LPIPS value than the baselines. Diffusion improves spectral power recovery, but a corresponding diffusion-sample LPIPS improvement has not been established by the reported experiment.
+
+### Forecast Performance by Nominal Lead Index
+
+| Forecast Index | SSIM ↑ | PSNR ↑ |
+| -------------- | -----: | -----: |
+| T+1            |  0.804 |  24.00 |
+| T+2            |  0.725 |  22.06 |
+| T+3            |  0.657 |  20.87 |
+
+Forecasting accuracy decreases as the prediction index increases.
+
+These indices describe future frames in the derived sequence, not verified minute-based lead times.
+
+### Performance by Spectral Band
+
+| Band | SSIM ↑ | PSNR ↑ | Persistence SSIM |
+| ---- | -----: | -----: | ---------------: |
+| TIR1 |  0.631 |  21.73 |            0.461 |
+| TIR2 |  0.751 |  22.20 |            0.697 |
+| WV   |  0.690 |  21.85 |            0.511 |
+| VIS  |  0.765 |  22.53 |            0.684 |
+| MIR  |  0.764 |  22.68 |            0.681 |
+| SWIR |  0.770 |  22.86 |            0.742 |
+
+The largest absolute improvements over persistence occur in:
+
+* **TIR1:** Approximately +0.170 SSIM.
+* **WV:** Approximately +0.178 SSIM.
+
+### Component Ablation Study
+
+**Results:** `results/ablation_full.json`
+
+| Configuration                     | Epochs | SSIM ↑ |  ΔSSIM | PSNR ↑ |
+| --------------------------------- | -----: | -----: | -----: | -----: |
+| Full model                        |     45 |  0.707 |      — |  21.89 |
+| Without residual-from-persistence |     45 |  0.220 | −0.487 |  11.55 |
+| Without motion meta-learner       |     45 |  0.630 | −0.077 |  20.12 |
+| Without gated refinement          |     28 |  0.694 | −0.013 |  22.22 |
+| Without physics regularizer       |     28 |  0.697 | −0.010 |  21.98 |
+
+The results identify residual-from-persistence prediction as a major architectural contribution.
+
+Removing the motion meta-learner also substantially reduces performance.
+
+The gated-refinement and physics-regularizer variants were trained for fewer epochs. Therefore, their performance differences cannot be attributed exclusively to removing those components.
+
+### Diffusion Spectral Fidelity
+
+**Results:** `results/tgrs_analysis.json`
+
+**Evaluation subset:** 70 held-out sequences.
+
+The spectral experiment compares high-frequency power against the ground-truth image spectrum.
+
+| Forecast                     | High-Frequency Power Ratio |
+| ---------------------------- | -------------------------: |
+| Deterministic K.A.L.A.M.     |                      0.466 |
+| Conditional diffusion sample |                  **0.843** |
+
+Diffusion recovers substantially more high-frequency spectral power than the deterministic prediction.
+
+The ratio describes spectral-power agreement rather than direct pixelwise reconstruction accuracy.
+
+### Probabilistic Forecasting and Uncertainty
+
+**Results:** `results/uncertainty_calibration.json`
+
+**Evaluation subset:** 42 held-out sequences.
+
+**Ensemble size:** 12.
+
+**DDIM sampling:** 20 steps.
+
+| Quantity                        |             Value |
+| ------------------------------- | ----------------: |
+| Diffusion ensemble CRPS         |            0.0462 |
+| Deterministic reference score   |            0.0577 |
+| Relative score reduction        | Approximately 20% |
+| Spread–skill correlation        |             0.612 |
+| Binned spread–error correlation |             0.945 |
+| Mean ensemble spread            |             0.056 |
+| Mean observed RMSE              |             0.087 |
+
+The ensemble demonstrates informative uncertainty ranking.
+
+Higher predicted uncertainty generally corresponds to larger observed errors.
+
+However, the ensemble spread is smaller than the observed RMSE.
+
+Consequently, the current predictions should be considered **underdispersed rather than absolutely calibrated**.
+
+The reported uncertainty values are most appropriately interpreted as relative indicators of forecasting difficulty.
+
+### Computational Efficiency
+
+**Benchmark:** `results/efficiency_benchmark.json`
+
+**GPU:** NVIDIA GeForce RTX 3050 Laptop GPU, 6 GB VRAM.
+
+**Input:** `[1, 4, 6, 128, 128]`
+
+**Output:** `[1, 3, 6, 128, 128]`
+
+| Measurement                          |       Value |
+| ------------------------------------ | ----------: |
+| Deterministic model parameters       |      43.21M |
+| Diffusion model parameters           |       3.73M |
+| Total parameters                     |      46.95M |
+| Deterministic inference              |     0.684 s |
+| Deterministic inference with 4× TTA  |     2.730 s |
+| One diffusion sample, DDIM-25        |     3.859 s |
+| Deterministic + one diffusion sample | **4.543 s** |
+| Deterministic peak GPU memory        |     1.87 GB |
+| Diffusion-stage peak GPU memory      |     0.80 GB |
+
+**Important:** The measured 4.54-second latency corresponds to deterministic inference followed by one 25-step diffusion sample.
+
+It does **not** represent the execution time of a complete 12-member diffusion ensemble.
+
+The complete ensemble requires additional sampling, and its end-to-end latency is not established by the published benchmark.
 
 ---
 
 ## Reproducibility
 
-- **Data:** 1489 overlapping sliding windows (4→3 frames, 6 bands, 128×128) from a single ~12h INSAT day. Per-clip min-max normalization to [0,1]. Filename timestamps are a defaulted placeholder (1970-05-30, uniform 0.5-min spacing) — treated as nominal, not true acquisition cadence (a stated limitation).
-- **Split:** chronological, `src/data_split.py` — train 1042 / val 223 / test 210, with a 7-window buffer between partitions so no frame is shared across splits (leakage-free).
-- **Non-determinism:** cuDNN convolution kernels aren't bit-deterministic; metrics reproduce to ~±0.002 SSIM across runs.
+### Dataset
+
+The research uses INSAT-3DR Imager Level-1C multispectral imagery obtained through ISRO's MOSDAC data services.
+
+The six spectral channels are:
+
+`VIS, SWIR, MIR, WV, TIR1, TIR2`
+
+The original imagery is approximately `1616 × 1737` pixels.
+
+The derived dataset contains **1,489 overlapping seven-frame examples**, each comprising:
+
+* Four observed frames.
+* Three prediction targets.
+* Six spectral channels.
+
+Each band is normalized to `[0,1]`, and the images are resized to `128 × 128`.
+
+The approximate effective sampling scale is 48 km per pixel.
+
+The current evaluation is therefore oriented toward mesoscale image patterns rather than individual convective cells.
+
+### Temporal Metadata
+
+The derived dataset preserves ordered sequence indices but does not retain authenticated UTC acquisition timestamps.
+
+Some filenames contain placeholder timestamps associated with nominal spacing.
+
+These placeholders are not treated as verified acquisition times.
+
+Accordingly, all forecasting results are reported using nominal frame indices.
+
+### Data Splitting
+
+**Implementation:** `src/data_split.py`
+
+The dataset uses ordered 70/15/15 partitioning with seven-window buffers between splits.
+
+This prevents shared frames across training, validation, and testing partitions.
+
+The existing split does not establish generalization across independent acquisition days or seasons.
+
+### Availability
+
+The repository provides:
+
+* Research implementation.
+* Model architecture definitions.
+* Training scripts.
+* Evaluation scripts.
+* Baseline implementations.
+* Configuration options.
+* Saved numerical results.
+* Generated evaluation figures.
+* Example inference outputs.
+
+The complete derived training cache and trained research checkpoints are not publicly distributed in the repository.
+
+Raw INSAT Level-1C products are available through the relevant ISRO/MOSDAC access mechanisms and are not redistributed here.
+
+### Research Pipeline
 
 ```bash
 cd Python-Backend
-pip install -r requirements.txt                              # PyTorch 2.6 + CUDA 12.4
 
-# Research track — train & evaluate
-python src/prep_cache.py                                      # build 128px tensor cache
+pip install -r requirements.txt
+
+# Preprocess source sequences into the training cache
+python src/prep_cache.py
+
+# Train the deterministic forecaster
 python src/train_pidm.py --epochs 260 --batch 12 --augment --ema 0.999 \
-       --w_ssl 0.3 --w_pde 0.03 --w_msssim 2.0 --lead_weights 0.6,1.0,1.4
-python src/train_diffusion.py --epochs 40                     # conditional DDPM
-python src/evaluate_and_plot.py                               # metrics + figures
-python src/baseline_simvp.py --epochs 70                       # learned baseline
-python src/make_sota_comparison.py                             # head-to-head verdict
-python src/uncertainty_calibration.py                          # CRPS / spread-skill
-python src/tgrs_analysis.py                                    # RAPSD sharpness
-python src/run_ablations.py --epochs 28 && python src/ablation_eval.py
-python src/efficiency_benchmark.py                              # latency / memory / params
+       --w_ssl 0.3 --w_pde 0.03 --w_msssim 2.0 \
+       --lead_weights 0.6,1.0,1.4
 
-# Deployment track — serve predictions
-python serving/npy2png.py && python serving/stack.py           # build serving/test_sorted_bands (edit BASE_DIR first)
-python serving/train4.py                                       # trains models/best_model.pth
-python serving/conv_2_onnx.py                                   # optional: export ONNX
-uvicorn serving.main:app --host 127.0.0.1 --port 8000           # POST /run_inference {base_dir, sequence_id}
+# Train conditional residual diffusion
+python src/train_diffusion.py --epochs 40
+
+# Evaluate deterministic forecasting
+python src/evaluate_and_plot.py
+
+# Train the SimVP baseline
+python src/baseline_simvp.py --epochs 70
+
+# Generate model comparisons
+python src/make_sota_comparison.py
+
+# Evaluate probabilistic uncertainty
+python src/uncertainty_calibration.py
+
+# Evaluate spectral characteristics
+python src/tgrs_analysis.py
+
+# Run ablation experiments
+python src/run_ablations.py --epochs 28
+python src/ablation_eval.py
+
+# Benchmark computational efficiency
+python src/efficiency_benchmark.py
 ```
 
-Model checkpoints (`*.pth`/`*.onnx`, ~90MB–1.6GB) are gitignored — train via the commands above, or attach as a GitHub Release / Git-LFS asset.
+These commands document the available research workflow. Reproduction requires access to the appropriately prepared source dataset and compatible model-training environment.
 
 ---
 
 ## Python-Backend Structure
 
-```
+```text
 Python-Backend/
 ├── requirements.txt
-├── .gitignore
-├── src/            research track — model, losses, diffusion, training, baselines, ablations, XAI
-├── serving/        deployment track — FastAPI inference API + ONNX export (see below)
-├── experimental/   exploratory work, NOT validated — see "Experimental / Future Work"
-└── results/        40+ figures + metrics JSON backing every number in this README
+├── src/
+│   ├── pidm_model.py
+│   ├── pidm_diffusion.py
+│   ├── pidm_losses.py
+│   ├── train_pidm.py
+│   ├── train_diffusion.py
+│   ├── data_split.py
+│   ├── evaluate_and_plot.py
+│   ├── baseline_simvp.py
+│   ├── uncertainty_calibration.py
+│   ├── tgrs_analysis.py
+│   ├── run_ablations.py
+│   └── efficiency_benchmark.py
+├── serving/
+├── experimental/
+└── results/
 ```
 
-**`serving/`** (FastAPI deployment layer):
+### Model Serving
 
-- `main.py` — FastAPI app, `POST /run_inference`
-- `inference.py` — loads a checkpoint, writes predicted PNGs + metrics
-- `train4.py` — "kalam_m1" generation: `EnhancedUNet`, matches the shipped `best_model.pth`
-- `train5.py` — "kalam_m2" generation: CBAM/multi-scale UNet + self-supervised retrainer (**not** the model `inference.py`/`main.py` load by default)
-- `conv_2_onnx.py` — exports `train4`'s `EnhancedUNet` checkpoint to ONNX
-- `npy2png.py`, `stack.py`, `pt2np.py` — raw `.npy` → sorted PNG bands → tensor cache prep
-- `view.py` — visualize a cached `.pt` sequence
-- `test1.py`, `test2.py` — manual single/batch inference smoke tests
+The `serving/` directory includes:
 
-The `serving/` track is younger and less validated than `src/` — it's the same underlying scripts, just cleaned of hardcoded personal paths for portability.
+* `main.py` — FastAPI application.
+* `inference.py` — Inference execution and prediction generation.
+* `train4.py` — Earlier EnhancedUNet implementation.
+* `train5.py` — CBAM-based alternative implementation.
+* `conv_2_onnx.py` — ONNX export.
+* `npy2png.py` — Data conversion.
+* `stack.py` — Multi-band tensor preparation.
+* `pt2np.py` — Tensor-to-NumPy conversion.
+* `view.py` — Data visualization.
+* `test1.py`, `test2.py` — Inference tests.
+
+The research model in `src/` and the application-serving implementations are maintained as separate development tracks.
+
+The published research metrics correspond to the evaluated research pipeline, not automatically to every model variant in `serving/`.
 
 ---
 
 ## Experimental / Future Work
 
-`Python-Backend/experimental/` is kept for transparency — it's exploratory work **not wired into `src/` or `serving/`**, and not validated the way the rest of the repo has been. Nothing here backs the measured results above.
+The `experimental/` directory contains exploratory model-development work that is not included in the main GRSL evaluation.
 
-- **`train6.py`** — a larger `UltraAdvancedUNet` with a **6-layer Transformer bottleneck** (`TemporalTransformer`), dense residual blocks, sinusoidal time-conditioning, and an interactive Tkinter training GUI, trained with a combined focal-L1 / Charbonnier / gradient / temporal ("PhyDiff-PINN") loss. This is the most architecturally ambitious idea in the repo (long-range spatio-temporal attention beyond the CNN receptive field) — but it has **never been benchmarked** against the `src/` evaluation protocol, so its real accuracy is unknown. Promoting it out of `experimental/` would require porting it to the leakage-free split and measuring it head-to-head against the table above.
-- **`stabdiff.py`** — adapts a pretrained Stable Diffusion v1.5 U-Net (via `diffusers`) to 6-band satellite frames with a custom conditioning adapter. Implements a full DDPM loop but was never run to a validated result.
-- **`fine_tune.py`** — a second Stable-Diffusion fine-tuning attempt. **Known bug:** it never actually noises the latents before denoising (`noisy_latents = noise` instead of `noise_scheduler.add_noise(...)`), so as written the network only learns to predict noise from noise. Left unpatched intentionally — treat as a starting point, not a working trainer.
-- **`s.py`** — a one-off HDF5 explorer for inspecting a raw INSAT L1C `.h5` file's dataset layout.
+### Transformer-Based Forecaster
+
+`train6.py` explores a larger architecture incorporating:
+
+* Transformer-based temporal modeling.
+* Residual convolutional blocks.
+* Time conditioning.
+* Additional forecasting losses.
+
+This model has not been validated under the complete research evaluation protocol.
+
+### Stable Diffusion Experiments
+
+`stabdiff.py` explores adapting a pretrained diffusion architecture to multispectral satellite imagery.
+
+`fine_tune.py` contains an additional experimental fine-tuning implementation.
+
+These experiments are retained for research transparency but do not support the reported GRSL results.
+
+### Future Research Directions
+
+Potential extensions include:
+
+* Independent-day and multi-season evaluation.
+* Acquisition-time-aware forecasting.
+* Improved uncertainty calibration.
+* Additional spectral and perceptual evaluation of diffusion outputs.
+* Higher-resolution satellite nowcasting.
+* Comparison against additional geostationary satellite forecasting architectures.
+* Improved computational efficiency for ensemble inference.
 
 ---
 
 ## Known Limitations
 
-- **Single-day dataset** — all splits come from one ~12h INSAT day; multi-season generalization is untested (the top priority for follow-up work).
-- **Physics term is a regularizer, not a proven advantage** — the continuity-PDE residual is non-discriminative on this low-motion data (persistence trivially scores lowest on it); it helps training stability, not a demonstrated physical constraint win.
-- Most named components are individually marginal (≤0.01 SSIM) at matched budget **except** the residual-from-persistence prior (dominant) and the FiLM meta-learner (real secondary contributor, +0.077).
-- Uncertainty is rank-reliable but **under-dispersed** — do not read it as calibrated without a spread-inflation correction (~1.5×).
-- `serving/` is less validated than `src/`, and `experimental/` is explicitly unfinished (see above).
-- A few Windows-specific absolute paths remain hardcoded in the Node backend for local dev — see [Local Paths To Update](#local-paths-to-update-very-important) below.
+The current study has several documented limitations.
+
+**1. Acquisition-period coverage**
+
+The evaluation uses data from one collection period. Generalization across different days, seasons, and atmospheric conditions remains untested.
+
+**2. Temporal metadata**
+
+Authenticated acquisition timestamps are not available in the derived dataset. Forecast indices therefore do not establish verified real-time forecasting horizons.
+
+**3. Spatial resolution**
+
+The effective sampling scale of approximately 48 km per pixel captures relatively large-scale patterns but does not resolve individual convective cells.
+
+**4. Probabilistic calibration**
+
+The diffusion ensemble is underdispersed. Its uncertainty values are informative for relative ranking but are not demonstrated to be calibrated absolute error estimates.
+
+**5. Physics regularization**
+
+The continuity-inspired objective encourages image-transport consistency. It does not prove atmospheric mass conservation or establish superior physical consistency over every baseline.
+
+**6. Ablation budgets**
+
+Two component-removal experiments use fewer training epochs than the full model, limiting causal interpretation of their differences.
+
+**7. Perceptual evaluation**
+
+The deterministic model has weaker LPIPS performance than the compared baselines. Diffusion demonstrates stronger high-frequency spectral-power recovery, but diffusion LPIPS improvements are not established in the reported results.
+
+**8. Ensemble inference**
+
+The measured 4.54-second latency is for deterministic prediction plus one diffusion sample, not the complete 12-member ensemble.
+
+**9. Reproduction resources**
+
+The complete derived cache and trained research checkpoints are not included in the public repository.
 
 ---
 
 ## Full-Stack Quick Start
 
-**Prerequisites:** Node.js 18+, Python 3.10+, MongoDB (local or Atlas), Cloudflare R2 bucket + credentials.
+### Prerequisites
 
-**Backend**
+* Node.js 18+
+* Python 3.10+
+* MongoDB
+* Cloudflare R2 credentials
+* PyTorch-compatible environment
+
+### Backend Setup
 
 ```bash
 cd backend
+
 npm install
-# create .env — see Environment Variables below
-npm run dev        # Express on :3000, WebSocket on :3001
+
+npm run dev
 ```
 
-**Frontend**
+The Express backend runs on port `3000`.
+
+The WebSocket server runs on port `3001`.
+
+### Frontend Setup
 
 ```bash
 cd frontend
+
 npm install
-npm run dev        # Vite dev server on :5173
+
+npm run dev
 ```
 
-**Python**
+The frontend runs on port `5173`.
+
+### Python Setup
 
 ```bash
 cd Python-Backend
+
 pip install -r requirements.txt
 ```
 
-Open the app at `http://localhost:5173`.
+### Environment Variables
 
-### Environment Variables (`backend/.env`)
+Create `backend/.env` with the required configuration.
 
-- **Server:** `PORT=3000`, `NODE_ENV=development`
-- **Database:** `MONGO_URL=mongodb://localhost:27017/project-kalam` (or Atlas URI)
-- **Cloudflare R2:** `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
+```env
+PORT=3000
+NODE_ENV=development
 
-On startup, the backend verifies R2 configuration and logs a health summary.
+MONGO_URL=mongodb://localhost:27017/project-kalam
 
-### Local Paths To Update (very important)
+R2_ENDPOINT=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_URL=
+```
 
-A few Windows paths are hard-coded for local dev during the hackathon — update these to match your environment and the `Python-Backend/serving/` layout:
+### Local Paths To Update
 
-- `backend/controllers/modelTest.controller.js:20` — `pythonScriptPath` currently points outside this repo (`d:\Hackathon\ISRO\pre_final\test1.py`). Point it at your local `Python-Backend/serving/test1.py` (or `test2.py`) instead.
-- `backend/app.js:28` and `backend/controllers/modelTest.controller.js:255,445` — `testOutputPath` currently points outside this repo. This should point at wherever you run `serving/inference.py`'s output — that folder is generated at runtime (gitignored), not shipped in the repo.
+Some backend components contain development-machine-specific file paths.
 
-### Run Flow
+Update these paths before running the application on another machine.
 
-- Start backend (`:3000`) and WebSocket server (`:3001`), then the frontend (`:5173`).
-- **"Chase The Cloud"** — animate frames and request predictions for T+1…T+3.
-- **"Test Model"** — stream Python logs via WebSocket.
-- **"Visualize On Map"** — explore overlays (if configured).
+Relevant files include:
+
+* `backend/controllers/modelTest.controller.js`
+* `backend/app.js`
+
+The Python inference script and prediction-output directories must point to locations available on the host system.
+
+### Application Workflow
+
+1. Start the Python inference service when required.
+2. Start the Express backend and WebSocket server.
+3. Start the React frontend.
+4. Open the application in a browser.
+5. Select available satellite sequences.
+6. Generate and visualize predictions.
+7. Explore forecast metrics and imagery.
 
 ---
 
 ## API Overview (backend)
 
-Base URL: `http://localhost:3000`
+**Base URL:** `http://localhost:3000`
 
-**Core**
+### Core Endpoints
 
-- `GET /` — Service info + advertised endpoints
-- `GET /api/prediction-images/<relative-path>` — Serves predicted images from `testOutputPath`
+| Endpoint                                     | Description               |
+| -------------------------------------------- | ------------------------- |
+| `GET /`                                      | Service information       |
+| `GET /api/prediction-images/<relative-path>` | Retrieve predicted images |
 
-**R2 Uploads (`/api/v1`)**
+### Cloudflare R2 Endpoints
 
-- `POST /upload` — Upload a single file (`field: file`); validates type/size, stores to R2, persists metadata to MongoDB
-- `POST /test-upload` — Multer sanity check
-- `GET /health` — R2 configuration/health snapshot
+| Endpoint            | Description                |
+| ------------------- | -------------------------- |
+| `POST /upload`      | Upload files               |
+| `POST /test-upload` | Test file uploads          |
+| `GET /health`       | Service and storage status |
 
-**Model Test & Predictions (`/api/v1`)**
+### Prediction Endpoints
 
-- `POST /folder-path` — Triggers the Python validation job; logs stream over WebSocket `ws://localhost:3001`
-- `POST /predict-frames` — Body: `{ timeWindow: number[4], selectedDirectory: string, bands: string[], windowSize: number }` → predicted frames metadata + performance aggregates
-- `GET /available-sequences` — Lists available `sequence_****` folders under `testOutputPath`
+| Endpoint                   | Description               |
+| -------------------------- | ------------------------- |
+| `POST /folder-path`        | Trigger Python validation |
+| `POST /predict-frames`     | Request forecast results  |
+| `GET /available-sequences` | List available sequences  |
+
+### FastAPI Research Serving
+
+The Python serving application exposes:
+
+`POST /run_inference`
+
+The endpoint supports the model-serving workflow using available input sequences and configured checkpoints.
 
 ---
 
 ## Frontend Highlights
 
-- Multi-band timeline with keyboard navigation and single-cycle animation
-- Predicted vs. ground-truth frame browsing for T+1…T+3 with metrics display
-- Directory selection via the File System Access API
-- Toaster notifications, dark/light theme toggle
+The React application provides:
 
-**Key Entrypoints**
+* A multispectral satellite-image viewer.
+* Frame-by-frame satellite animation.
+* Forecast and ground-truth comparison.
+* Interactive band selection.
+* Model-inference execution.
+* Performance reporting.
+* Map-based satellite visualization.
+* WebSocket-based processing updates.
+* Responsive dashboard components.
 
-- `frontend/src/App.jsx` — Routes: `/` (landing), `/test`, `/overlay-clouds`, `/satellite-animation`
-- `frontend/src/pages/SatelliteAnimationPage.jsx` — Main nowcasting UI
-- `frontend/src/components/ModelTestAndTerminalPreview.jsx` — WebSocket log streaming UI
-- `frontend/src/libs/axios.js` — Base API URL (`http://localhost:3000/api/v1`)
+### Frontend Structure
 
-**Backend Entrypoints**
+```text
+frontend/
+├── src/
+│   ├── App.jsx
+│   ├── components/
+│   ├── pages/
+│   ├── hooks/
+│   ├── libs/
+│   └── styles/
+└── public/
+```
 
-- `backend/app.js` — Express setup, static files, WebSocket server, routes
-- `backend/routes/r2upload.routes.js`, `backend/controllers/r2upload.controller.js` — Upload/health endpoints + R2/MongoDB persistence
-- `backend/routes/modelTest.routes.js`, `backend/controllers/modelTest.controller.js` — Python spawn, prediction assembly, performance parsing
-- `backend/config/r2.config.js` — R2 client + connectivity test
-- `backend/utils/db.js` — Mongo connection helper
-- `backend/models/File.model.js` — File schema
+### Main Components
+
+* `SatelliteAnimationPage.jsx` — Satellite-frame visualization.
+* `ModelTestAndTerminalPreview.jsx` — Model testing and logs.
+* `MapComponent.jsx` — Map integration.
+* `ReportPage.jsx` — Forecast results and reporting.
+* `EnhancedFileBrowser.jsx` — File selection.
+* `FileAssignmentSection.jsx` — Data assignment workflow.
 
 ---
 
 ## Troubleshooting
 
-- **Images not loading:** update `testOutputPath` in `backend/app.js` and the controller references.
-- **WebSocket not connecting:** ensure `ws://localhost:3001` is reachable and not firewalled.
-- **Uploads failing:** verify `.env` R2 variables and bucket permissions; check `GET /api/v1/health`.
-- **Mongo errors:** confirm `MONGO_URL` and that MongoDB is running.
-- **Python errors:** fix `pythonScriptPath`, activate your Python env, and run the target script manually to verify.
+**Images not loading**
+
+Verify the prediction-output directory and corresponding backend file paths.
+
+**WebSocket connection errors**
+
+Ensure the WebSocket service is running on the configured port.
+
+**Cloudflare R2 upload failures**
+
+Check the R2 endpoint, access keys, bucket name, and permissions.
+
+**MongoDB errors**
+
+Verify the MongoDB connection string and database availability.
+
+**Python inference errors**
+
+Ensure the correct Python environment, model checkpoint, input directory, and required dependencies are configured.
+
+**CUDA errors**
+
+Verify PyTorch compatibility with the installed GPU driver and CUDA environment.
+
+**Missing research data**
+
+The complete research cache is not distributed through this repository. Reproducing training requires obtaining the relevant satellite data and preparing the derived sequences.
 
 ---
 
 ## Citation
 
-If you use or extend this work, please cite the repository and team:
+### Research Manuscript
+
+**K.A.L.A.M.: Efficient Probabilistic Cloud Nowcasting from INSAT-3DR on a Single Consumer GPU**
+
+Authors:
+
+Nisarg Vashi, Heli Shah, Hensi Patel, Krish Vaghasia, Aparna Kumari, and Madhukant Patel.
+
+Manuscript prepared for submission to *IEEE Geoscience and Remote Sensing Letters*.
+
+This manuscript has not been identified as an accepted or published IEEE article.
+
+### BibTeX
 
 ```bibtex
-@misc{kalam2025,
-  title        = {K.A.L.A.M.: Knowledge-guided Atmospheric Learning for Adaptive Motion Forecasting},
-  author       = {Team DOMinators},
-  year         = {2025},
-  howpublished = {\url{https://github.com/info-gallary/K.A.L.A.M.}},
-  note         = {National Runner-up, ISRO Bhartiya Antariksh Hackathon 2025}
+@misc{vashi2026kalam,
+  title  = {K.A.L.A.M.: Efficient Probabilistic Cloud
+            Nowcasting from INSAT-3DR on a Single
+            Consumer GPU},
+  author = {Vashi, Nisarg and
+            Shah, Heli and
+            Patel, Hensi and
+            Vaghasia, Krish and
+            Kumari, Aparna and
+            Patel, Madhukant},
+  year   = {2026},
+  note   = {Research manuscript prepared for
+            submission to IEEE Geoscience and
+            Remote Sensing Letters},
+  url    = {https://github.com/info-gallary/K.A.L.A.M.}
 }
 ```
+
+### Project Recognition
+
+K.A.L.A.M. was developed by **Team DOMinators**, National Runner-up (2nd Place) at the **ISRO Bhartiya Antariksh Hackathon 2025**.
 
 ---
 
 ## Acknowledgements & License
 
-- ISRO Bhartiya Antariksh Hackathon 2025 — National Runner-up (2nd Place)
-- Gratitude to mentors, organizers, and the open-source community
-- **License:** MIT — see [`LICENSE`](LICENSE)
+The authors acknowledge the Indian Space Research Organisation (ISRO), the National Remote Sensing Centre (NRSC), Hyderabad, and the organizers of Bhartiya Antariksh Hackathon 2025 for providing the opportunity and access to satellite data.
+
+The authors also acknowledge Nirma University for institutional support.
+
+Claude (Anthropic) was used for language refinement in the research manuscript. Responsibility for the scientific content, methodology, experiments, and conclusions remains with the authors.
+
+**License:** MIT.
+
+See [`LICENSE`](LICENSE) for details.
+
+---
+
+**K.A.L.A.M. — Knowledge-Augmented Learning for Atmospheric Metamodels**
+
+*Efficient Probabilistic Cloud Nowcasting from INSAT-3DR on a Single Consumer GPU.*
